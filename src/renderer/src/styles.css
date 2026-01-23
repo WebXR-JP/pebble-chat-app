@@ -1,0 +1,33 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background-color: #fafafa;
+  color: #333;
+  line-height: 1.5;
+}
+
+button {
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+code {
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+}
