@@ -1,5 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron'
-import { IPC_CHANNELS, ElectronAPI, SetupProgress, StreamInfo } from '../shared/types'
+import { contextBridge, ipcRenderer, desktopCapturer } from 'electron'
+import { IPC_CHANNELS, ElectronAPI, SetupProgress, StreamInfo, CaptureInfo, CaptureSource } from '../shared/types'
 
 const electronAPI: ElectronAPI = {
   // セットアップ
@@ -29,7 +29,37 @@ const electronAPI: ElectronAPI = {
     }
   },
 
-  getStreamStatus: () => ipcRenderer.invoke(IPC_CHANNELS.STREAM_STATUS)
+  getStreamStatus: () => ipcRenderer.invoke(IPC_CHANNELS.STREAM_STATUS),
+
+  // キャプチャ
+  getCaptureSources: async (): Promise<CaptureSource[]> => {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+      fetchWindowIcons: true
+    })
+
+    return sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      thumbnail: source.thumbnail.toDataURL(),
+      type: source.id.startsWith('screen:') ? 'screen' : 'window'
+    }))
+  },
+
+  startCapture: (sourceId: string) => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_START, sourceId),
+
+  stopCapture: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_STOP),
+
+  onCaptureStatus: (callback: (info: CaptureInfo) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, info: CaptureInfo) => callback(info)
+    ipcRenderer.on(IPC_CHANNELS.CAPTURE_STATUS, handler)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.CAPTURE_STATUS, handler)
+    }
+  },
+
+  getCaptureStatus: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_STATUS)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

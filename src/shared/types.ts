@@ -1,6 +1,25 @@
 // 配信状態
 export type StreamStatus = 'idle' | 'starting' | 'running' | 'stopping' | 'error'
 
+// キャプチャソース
+export interface CaptureSource {
+  id: string
+  name: string
+  thumbnail: string
+  type: 'screen' | 'window'
+}
+
+// キャプチャ状態
+export type CaptureStatus = 'idle' | 'capturing' | 'error'
+
+// キャプチャ情報
+export interface CaptureInfo {
+  status: CaptureStatus
+  sourceId: string | null
+  sourceName: string | null
+  error: string | null
+}
+
 // セットアップ状態
 export type SetupStatus = 'pending' | 'downloading' | 'ready' | 'error'
 
@@ -42,6 +61,12 @@ export const IPC_CHANNELS = {
   STREAM_STOP: 'stream:stop',
   STREAM_STATUS: 'stream:status',
 
+  // キャプチャ
+  CAPTURE_GET_SOURCES: 'capture:getSources',
+  CAPTURE_START: 'capture:start',
+  CAPTURE_STOP: 'capture:stop',
+  CAPTURE_STATUS: 'capture:status',
+
   // 設定
   CONFIG_GET: 'config:get',
   CONFIG_SET: 'config:set'
@@ -59,4 +84,11 @@ export interface ElectronAPI {
   stopStream: () => Promise<void>
   onStreamStatus: (callback: (info: StreamInfo) => void) => () => void
   getStreamStatus: () => Promise<StreamInfo>
+
+  // キャプチャ
+  getCaptureSources: () => Promise<CaptureSource[]>
+  startCapture: (sourceId: string) => Promise<CaptureInfo>
+  stopCapture: () => Promise<void>
+  onCaptureStatus: (callback: (info: CaptureInfo) => void) => () => void
+  getCaptureStatus: () => Promise<CaptureInfo>
 }
