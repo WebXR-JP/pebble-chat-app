@@ -156,7 +156,7 @@ rtmpAddress: :1935
 # HLS出力設定
 hls: yes
 hlsAddress: :8888
-hlsVariant: lowLatency
+hlsVariant: mpegts
 hlsSegmentCount: 7
 hlsSegmentDuration: 1s
 hlsPartDuration: 200ms
