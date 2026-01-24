@@ -153,6 +153,10 @@ logDestinations: [stdout]
 rtmp: yes
 rtmpAddress: :1935
 
+# WebRTC/WHIP入力設定
+webrtc: yes
+webrtcAddress: :8889
+
 # HLS出力設定
 hls: yes
 hlsAddress: :8888
@@ -167,7 +171,6 @@ api: no
 metrics: no
 pprof: no
 rtsp: no
-webrtc: no
 srt: no
 
 # パス設定（任意のパスを受け入れる）

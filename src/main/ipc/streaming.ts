@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron'
-import { IPC_CHANNELS, SetupProgress, StreamInfo } from '../../shared/types'
+import { IPC_CHANNELS, SetupProgress, StreamInfo, CaptureInfo, CaptureSource } from '../../shared/types'
 import { isMediaMTXInstalled, installMediaMTX } from '../services/binary'
 import { startMediaMTX, stopMediaMTX, getMediaMTXStatus } from '../services/mediamtx'
 import {
@@ -10,6 +10,13 @@ import {
   getTunnelStatus,
   getHlsPublicUrl
 } from '../services/tunnel'
+import {
+  getCaptureSources,
+  startCaptureSession,
+  stopCaptureSession,
+  getCaptureStatus,
+  setCaptureError
+} from '../services/capture'
 
 let currentStreamInfo: StreamInfo = {
   status: 'idle',
@@ -31,6 +38,13 @@ function sendStreamStatus(window: BrowserWindow | null, info: StreamInfo): void 
   currentStreamInfo = info
   if (window && !window.isDestroyed()) {
     window.webContents.send(IPC_CHANNELS.STREAM_STATUS, info)
+  }
+}
+
+// キャプチャ状態を送信
+function sendCaptureStatus(window: BrowserWindow | null, info: CaptureInfo): void {
+  if (window && !window.isDestroyed()) {
+    window.webContents.send(IPC_CHANNELS.CAPTURE_STATUS, info)
   }
 }
 
@@ -202,6 +216,48 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
     }
 
     return currentStreamInfo
+  })
+
+  // キャプチャソース一覧取得
+  ipcMain.handle(IPC_CHANNELS.CAPTURE_GET_SOURCES, async (): Promise<CaptureSource[]> => {
+    return await getCaptureSources()
+  })
+
+  // キャプチャ開始
+  ipcMain.handle(
+    IPC_CHANNELS.CAPTURE_START,
+    async (_event, sourceId: string): Promise<CaptureInfo> => {
+      const window = getMainWindow()
+      const sources = await getCaptureSources()
+      const source = sources.find((s) => s.id === sourceId)
+
+      if (!source) {
+        const errorInfo: CaptureInfo = {
+          status: 'error',
+          sourceId: null,
+          sourceName: null,
+          error: 'キャプチャソースが見つかりません'
+        }
+        sendCaptureStatus(window, errorInfo)
+        throw new Error(errorInfo.error)
+      }
+
+      const info = startCaptureSession(sourceId, source.name)
+      sendCaptureStatus(window, info)
+      return info
+    }
+  )
+
+  // キャプチャ停止
+  ipcMain.handle(IPC_CHANNELS.CAPTURE_STOP, async (): Promise<void> => {
+    const window = getMainWindow()
+    stopCaptureSession()
+    sendCaptureStatus(window, getCaptureStatus())
+  })
+
+  // キャプチャ状態取得
+  ipcMain.handle(IPC_CHANNELS.CAPTURE_STATUS, async (): Promise<CaptureInfo> => {
+    return getCaptureStatus()
   })
 }
 

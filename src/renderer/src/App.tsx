@@ -1,13 +1,34 @@
+import { useState } from 'react'
 import { SetupProgress } from './components/SetupProgress'
 import { StreamControls } from './components/StreamControls'
 import { StatusDisplay } from './components/StatusDisplay'
 import { UrlDisplay } from './components/UrlDisplay'
+import { CaptureSourceSelector } from './components/CaptureSourceSelector'
 import { useSetup } from './hooks/useSetup'
 import { useStreaming } from './hooks/useStreaming'
+import { useCapture } from './hooks/useCapture'
 
 function App() {
   const setup = useSetup()
   const streaming = useStreaming()
+  const capture = useCapture()
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
+
+  const handleStartCapture = async () => {
+    if (!selectedSourceId) return
+
+    // まずサーバーを起動
+    if (!streaming.isStreaming) {
+      await streaming.startStream()
+    }
+
+    // キャプチャ開始
+    await capture.startCapture(selectedSourceId)
+  }
+
+  const handleStopCapture = async () => {
+    await capture.stopCapture()
+  }
 
   return (
     <div style={styles.container}>
@@ -26,28 +47,34 @@ function App() {
           />
         )}
 
-        <StatusDisplay streamInfo={streaming.streamInfo} />
+        {setup.isReady && (
+          <CaptureSourceSelector
+            sources={capture.sources}
+            selectedSourceId={selectedSourceId}
+            isLoading={capture.isLoading || streaming.isLoading}
+            isCapturing={capture.isCapturing}
+            connectionState={capture.connectionState}
+            onRefresh={capture.refreshSources}
+            onSelect={setSelectedSourceId}
+            onStartCapture={handleStartCapture}
+            onStopCapture={handleStopCapture}
+          />
+        )}
 
-        <StreamControls
-          isStreaming={streaming.isStreaming}
-          isLoading={streaming.isLoading}
-          isReady={setup.isReady}
-          onStart={streaming.startStream}
-          onStop={streaming.stopStream}
-        />
+        <StatusDisplay streamInfo={streaming.streamInfo} />
 
         <UrlDisplay streamInfo={streaming.streamInfo} />
 
-        {streaming.error && <p style={styles.error}>{streaming.error}</p>}
+        {(streaming.error || capture.error) && (
+          <p style={styles.error}>{streaming.error || capture.error}</p>
+        )}
 
-        {setup.isReady && !streaming.isStreaming && (
+        {setup.isReady && !capture.isCapturing && (
           <div style={styles.instructions}>
             <h3 style={styles.instructionsTitle}>使い方</h3>
             <ol style={styles.instructionsList}>
-              <li>「配信開始」をクリック</li>
-              <li>OBSで配信設定を行う</li>
-              <li>表示されたRTMP URLをOBSに設定</li>
-              <li>OBSで配信開始</li>
+              <li>キャプチャしたい画面またはウィンドウを選択</li>
+              <li>「キャプチャ開始」をクリック</li>
               <li>公開URLをiwaSyncに貼り付け</li>
             </ol>
           </div>
