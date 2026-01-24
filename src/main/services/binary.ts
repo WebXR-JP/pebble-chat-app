@@ -149,6 +149,10 @@ async function copyMediaMTXConfig(): Promise<void> {
 logLevel: info
 logDestinations: [stdout]
 
+# RTSP設定（FFmpegトランスコード用）
+rtsp: yes
+rtspAddress: :8554
+
 # RTMP入力設定
 rtmp: yes
 rtmpAddress: :1935
@@ -157,24 +161,32 @@ rtmpAddress: :1935
 webrtc: yes
 webrtcAddress: :8889
 
-# HLS出力設定
+# HLS出力設定（低遅延向け）
 hls: yes
 hlsAddress: :8888
 hlsVariant: mpegts
-hlsSegmentCount: 7
+hlsSegmentCount: 3
 hlsSegmentDuration: 1s
 hlsPartDuration: 200ms
 hlsAllowOrigin: '*'
+hlsAlwaysRemux: yes
 
 # 不要なプロトコルを無効化
 api: no
 metrics: no
 pprof: no
-rtsp: no
 srt: no
 
-# パス設定（任意のパスを受け入れる）
+# パス設定
 paths:
+  live:
+    # WebRTC入力後、FFmpegでH.264に変換（低遅延設定）
+    runOnReady: ffmpeg -fflags nobuffer -flags low_delay -i rtsp://localhost:8554/live -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -f flv rtmp://localhost:1935/live_hls
+    runOnReadyRestart: yes
+
+  live_hls:
+    # HLS用パス（H.264）
+
   all_others:
 `.trim()
 

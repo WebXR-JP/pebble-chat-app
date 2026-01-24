@@ -138,5 +138,5 @@ export function getHlsPublicUrl(): string | null {
   }
   // URLの末尾スラッシュを処理
   const baseUrl = publicUrl.endsWith('/') ? publicUrl.slice(0, -1) : publicUrl
-  return `${baseUrl}/live/index.m3u8`
+  return `${baseUrl}/live_hls/index.m3u8`
 }

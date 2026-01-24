@@ -155,7 +155,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       const info: StreamInfo = {
         status: 'running',
         rtmpUrl: 'rtmp://localhost:1935/live',
-        hlsUrl: 'http://localhost:8888/live/index.m3u8',
+        hlsUrl: 'http://localhost:8888/live_hls/index.m3u8',
         publicUrl: getHlsPublicUrl(),
         error: null
       }
@@ -209,7 +209,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       return {
         status: 'running',
         rtmpUrl: 'rtmp://localhost:1935/live',
-        hlsUrl: 'http://localhost:8888/live/index.m3u8',
+        hlsUrl: 'http://localhost:8888/live_hls/index.m3u8',
         publicUrl: getHlsPublicUrl(),
         error: null
       }

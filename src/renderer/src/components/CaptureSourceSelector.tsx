@@ -88,11 +88,17 @@ export function CaptureSourceSelector({
               }}
               onClick={() => !isCapturing && onSelect(source.id)}
             >
-              <img
-                src={source.thumbnail}
-                alt={source.name}
-                style={styles.thumbnail}
-              />
+              {source.thumbnail ? (
+                <img
+                  src={source.thumbnail}
+                  alt={source.name}
+                  style={styles.thumbnail}
+                />
+              ) : (
+                <div style={styles.thumbnailPlaceholder}>
+                  {source.type === 'screen' ? '🖥️' : '🪟'}
+                </div>
+              )}
               <div style={styles.sourceInfo}>
                 <span style={styles.sourceName}>{source.name}</span>
                 <span style={styles.sourceType}>
@@ -191,6 +197,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     objectFit: 'cover',
     borderRadius: '4px',
     marginBottom: '8px'
+  },
+  thumbnailPlaceholder: {
+    width: '100%',
+    aspectRatio: '16/9',
+    backgroundColor: '#e0e0e0',
+    borderRadius: '4px',
+    marginBottom: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '32px'
   },
   sourceInfo: {
     display: 'flex',

@@ -1,6 +1,8 @@
 // WHIP (WebRTC-HTTP Ingestion Protocol) クライアント
 
 const WHIP_ENDPOINT = 'http://localhost:8889/live/whip'
+const MAX_RETRIES = 5
+const RETRY_DELAY_MS = 1000
 
 export interface WHIPClientOptions {
   onConnectionStateChange?: (state: RTCPeerConnectionState) => void
@@ -29,13 +31,19 @@ export class WHIPClient {
       }
     }
 
-    // MediaStreamのトラックを追加
+    // MediaStreamのトラックを追加（H.264を優先）
     stream.getTracks().forEach((track) => {
-      this.pc!.addTrack(track, stream)
+      if (track.kind === 'video') {
+        const transceiver = this.pc!.addTransceiver(track, {
+          direction: 'sendonly',
+          streams: [stream]
+        })
+        // H.264を優先するようにコーデックを設定
+        this.preferH264Codec(transceiver)
+      } else {
+        this.pc!.addTrack(track, stream)
+      }
     })
-
-    // ICE候補の収集完了を待つ
-    await this.waitForIceGathering()
 
     // Offer SDPを作成
     const offer = await this.pc.createOffer()
@@ -48,19 +56,8 @@ export class WHIPClient {
       throw new Error('Failed to gather ICE candidates')
     }
 
-    // WHIPエンドポイントにOfferを送信
-    const response = await fetch(WHIP_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/sdp'
-      },
-      body: localDescription.sdp
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`WHIP request failed: ${response.status} ${errorText}`)
-    }
+    // WHIPエンドポイントにOfferを送信（リトライ付き）
+    const response = await this.sendOfferWithRetry(localDescription.sdp!)
 
     // リソースURLを保存（後で削除に使用）
     this.resourceUrl = response.headers.get('Location') || WHIP_ENDPOINT
@@ -73,33 +70,62 @@ export class WHIPClient {
     })
   }
 
-  private waitForIceGathering(): Promise<void> {
-    return new Promise((resolve) => {
-      if (!this.pc) {
-        resolve()
-        return
-      }
+  private async sendOfferWithRetry(sdp: string): Promise<Response> {
+    let lastError: Error | null = null
 
-      if (this.pc.iceGatheringState === 'complete') {
-        resolve()
-        return
-      }
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await fetch(WHIP_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/sdp'
+          },
+          body: sdp
+        })
 
-      const checkState = () => {
-        if (this.pc?.iceGatheringState === 'complete') {
-          this.pc.removeEventListener('icegatheringstatechange', checkState)
-          resolve()
+        if (response.ok) {
+          return response
         }
+
+        const errorText = await response.text()
+        lastError = new Error(`WHIP request failed: ${response.status} ${errorText}`)
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err))
       }
 
-      this.pc.addEventListener('icegatheringstatechange', checkState)
+      // 最後の試行でなければリトライ前に待機
+      if (attempt < MAX_RETRIES) {
+        await this.delay(RETRY_DELAY_MS)
+      }
+    }
 
-      // タイムアウト: 5秒
-      setTimeout(() => {
-        this.pc?.removeEventListener('icegatheringstatechange', checkState)
-        resolve()
-      }, 5000)
-    })
+    throw lastError || new Error('WHIP connection failed after retries')
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  // H.264コーデックを優先するように設定
+  private preferH264Codec(transceiver: RTCRtpTransceiver): void {
+    try {
+      const codecs = RTCRtpSender.getCapabilities?.('video')?.codecs
+      if (!codecs) return
+
+      // H.264コーデックを優先順位の最初に配置
+      const h264Codecs = codecs.filter(
+        (codec) => codec.mimeType.toLowerCase() === 'video/h264'
+      )
+      const otherCodecs = codecs.filter(
+        (codec) => codec.mimeType.toLowerCase() !== 'video/h264'
+      )
+
+      if (h264Codecs.length > 0) {
+        transceiver.setCodecPreferences([...h264Codecs, ...otherCodecs])
+      }
+    } catch {
+      // H.264が利用できない場合はデフォルトのコーデックを使用
+    }
   }
 
   private waitForLocalDescription(): Promise<RTCSessionDescription | null> {

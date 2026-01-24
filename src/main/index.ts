@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerAllHandlers, cleanupStreaming } from './ipc'
@@ -17,7 +17,10 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      // webSecurity: false は MediaMTX (localhost:8889) へのWHIP/WebRTC接続に必要
+      // 本番環境でも localhost 接続のみのため、セキュリティリスクは限定的
+      webSecurity: false
     }
   })
 
@@ -42,6 +45,22 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Electron開発ツールの設定
   electronApp.setAppUserModelId('com.xrift.stream')
+
+  // CSPを緩和してlocalhostへの接続を許可
+  // - 'unsafe-inline': React のインラインスタイルに必要
+  // - 'unsafe-eval': 開発モードのホットリロードに必要（本番ビルドでは不要だが互換性のため維持）
+  // - connect-src localhost:*: MediaMTX (WHIP/HLS) への接続に必要
+  // - img-src data:: サムネイルのBase64画像表示に必要
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:"
+        ]
+      }
+    })
+  })
 
   // 開発時のF12でDevTools、本番時は無効化
   app.on('browser-window-created', (_, window) => {
@@ -71,7 +90,6 @@ app.on('window-all-closed', () => {
 // アプリ終了前にクリーンアップ
 app.on('before-quit', async (event) => {
   event.preventDefault()
-  console.log('Cleaning up before quit...')
   await cleanupStreaming()
   app.exit(0)
 })
