@@ -3,9 +3,10 @@ import type { StreamInfo } from '../../../shared/types'
 
 interface Props {
   streamInfo: StreamInfo
+  mode: 'direct' | 'obs'
 }
 
-export function UrlDisplay({ streamInfo }: Props) {
+export function UrlDisplay({ streamInfo, mode }: Props) {
   const [copied, setCopied] = useState<string | null>(null)
 
   if (streamInfo.status !== 'running') {
@@ -17,8 +18,8 @@ export function UrlDisplay({ streamInfo }: Props) {
       await navigator.clipboard.writeText(text)
       setCopied(key)
       setTimeout(() => setCopied(null), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
+    } catch {
+      // コピー失敗は無視
     }
   }
 
@@ -26,19 +27,21 @@ export function UrlDisplay({ streamInfo }: Props) {
     <div style={styles.container}>
       <h3 style={styles.title}>配信URL</h3>
 
-      {/* OBS設定 */}
-      <div style={styles.section}>
-        <label style={styles.label}>OBS RTMP URL:</label>
-        <div style={styles.urlRow}>
-          <code style={styles.url}>{streamInfo.rtmpUrl}</code>
-          <button
-            style={styles.copyButton}
-            onClick={() => copyToClipboard(streamInfo.rtmpUrl!, 'rtmp')}
-          >
-            {copied === 'rtmp' ? 'コピーしました' : 'コピー'}
-          </button>
+      {/* OBS設定（OBS経由モードのみ表示） */}
+      {mode === 'obs' && (
+        <div style={styles.section}>
+          <label style={styles.label}>OBS RTMP URL:</label>
+          <div style={styles.urlRow}>
+            <code style={styles.url}>{streamInfo.rtmpUrl}</code>
+            <button
+              style={styles.copyButton}
+              onClick={() => copyToClipboard(streamInfo.rtmpUrl!, 'rtmp')}
+            >
+              {copied === 'rtmp' ? 'コピーしました' : 'コピー'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 公開URL */}
       {streamInfo.publicUrl && (

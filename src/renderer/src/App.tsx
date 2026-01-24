@@ -8,11 +8,14 @@ import { useSetup } from './hooks/useSetup'
 import { useStreaming } from './hooks/useStreaming'
 import { useCapture } from './hooks/useCapture'
 
+type StreamMode = 'direct' | 'obs'
+
 function App() {
   const setup = useSetup()
   const streaming = useStreaming()
   const capture = useCapture()
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
+  const [streamMode, setStreamMode] = useState<StreamMode>('direct')
 
   const handleStartCapture = async () => {
     if (!selectedSourceId) return
@@ -29,6 +32,19 @@ function App() {
   const handleStopCapture = async () => {
     await capture.stopCapture()
   }
+
+  const handleStartObs = async () => {
+    if (!streaming.isStreaming) {
+      await streaming.startStream()
+    }
+  }
+
+  const handleStopObs = async () => {
+    await streaming.stopStream()
+  }
+
+  // モード切替は配信中は無効
+  const canSwitchMode = !capture.isCapturing && !streaming.isStreaming
 
   return (
     <div style={styles.container}>
@@ -48,34 +64,105 @@ function App() {
         )}
 
         {setup.isReady && (
-          <CaptureSourceSelector
-            sources={capture.sources}
-            selectedSourceId={selectedSourceId}
-            isLoading={capture.isLoading || streaming.isLoading}
-            isCapturing={capture.isCapturing}
-            connectionState={capture.connectionState}
-            onRefresh={capture.refreshSources}
-            onSelect={setSelectedSourceId}
-            onStartCapture={handleStartCapture}
-            onStopCapture={handleStopCapture}
-          />
+          <>
+            {/* 配信モード選択 */}
+            <div style={styles.modeSelector}>
+              <span style={styles.modeLabel}>配信モード:</span>
+              <label style={styles.radioLabel}>
+                <input
+                  type="radio"
+                  name="streamMode"
+                  value="direct"
+                  checked={streamMode === 'direct'}
+                  onChange={() => setStreamMode('direct')}
+                  disabled={!canSwitchMode}
+                />
+                直接配信（推奨）
+              </label>
+              <label style={styles.radioLabel}>
+                <input
+                  type="radio"
+                  name="streamMode"
+                  value="obs"
+                  checked={streamMode === 'obs'}
+                  onChange={() => setStreamMode('obs')}
+                  disabled={!canSwitchMode}
+                />
+                OBS経由
+              </label>
+            </div>
+
+            {/* 直接配信モード */}
+            {streamMode === 'direct' && (
+              <CaptureSourceSelector
+                sources={capture.sources}
+                selectedSourceId={selectedSourceId}
+                isLoading={capture.isLoading || streaming.isLoading}
+                isCapturing={capture.isCapturing}
+                connectionState={capture.connectionState}
+                onRefresh={capture.refreshSources}
+                onSelect={setSelectedSourceId}
+                onStartCapture={handleStartCapture}
+                onStopCapture={handleStopCapture}
+              />
+            )}
+
+            {/* OBS経由モード */}
+            {streamMode === 'obs' && (
+              <div style={styles.obsMode}>
+                <p style={styles.obsModeText}>
+                  OBSの「配信」設定で下記のRTMP URLを設定してください。
+                </p>
+                <div style={styles.obsControls}>
+                  {streaming.isStreaming ? (
+                    <button
+                      style={{ ...styles.button, backgroundColor: '#f44336' }}
+                      onClick={handleStopObs}
+                      disabled={streaming.isLoading}
+                    >
+                      {streaming.isLoading ? '停止中...' : 'サーバー停止'}
+                    </button>
+                  ) : (
+                    <button
+                      style={{ ...styles.button, backgroundColor: '#4caf50' }}
+                      onClick={handleStartObs}
+                      disabled={streaming.isLoading}
+                    >
+                      {streaming.isLoading ? '起動中...' : 'サーバー起動'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <StatusDisplay streamInfo={streaming.streamInfo} />
 
-        <UrlDisplay streamInfo={streaming.streamInfo} />
+        <UrlDisplay streamInfo={streaming.streamInfo} mode={streamMode} />
 
         {(streaming.error || capture.error) && (
           <p style={styles.error}>{streaming.error || capture.error}</p>
         )}
 
-        {setup.isReady && !capture.isCapturing && (
+        {setup.isReady && !capture.isCapturing && !streaming.isStreaming && (
           <div style={styles.instructions}>
             <h3 style={styles.instructionsTitle}>使い方</h3>
             <ol style={styles.instructionsList}>
-              <li>キャプチャしたい画面またはウィンドウを選択</li>
-              <li>「キャプチャ開始」をクリック</li>
-              <li>公開URLをiwaSyncに貼り付け</li>
+              {streamMode === 'direct' ? (
+                <>
+                  <li>キャプチャしたい画面またはウィンドウを選択</li>
+                  <li>「キャプチャ開始」をクリック</li>
+                  <li>公開URLをiwaSyncに貼り付け</li>
+                </>
+              ) : (
+                <>
+                  <li>「サーバー起動」をクリック</li>
+                  <li>OBSの配信設定でRTMP URLを設定</li>
+                  <li>OBSで配信開始</li>
+                  <li>公開URLをiwaSyncに貼り付け</li>
+                </>
+              )}
             </ol>
           </div>
         )}
@@ -133,6 +220,49 @@ const styles: { [key: string]: React.CSSProperties } = {
     paddingLeft: '20px',
     fontSize: '13px',
     color: '#666'
+  },
+  modeSelector: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    padding: '12px 16px',
+    backgroundColor: '#f5f5f5',
+    borderRadius: '8px',
+    marginBottom: '16px'
+  },
+  modeLabel: {
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#333'
+  },
+  radioLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '13px',
+    color: '#555',
+    cursor: 'pointer'
+  },
+  obsMode: {
+    marginBottom: '20px'
+  },
+  obsModeText: {
+    fontSize: '13px',
+    color: '#666',
+    marginBottom: '12px'
+  },
+  obsControls: {
+    display: 'flex',
+    justifyContent: 'center'
+  },
+  button: {
+    padding: '12px 32px',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer'
   },
   footer: {
     textAlign: 'center',
