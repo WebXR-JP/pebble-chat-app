@@ -1,6 +1,8 @@
 // WHIP (WebRTC-HTTP Ingestion Protocol) クライアント
 
 const WHIP_ENDPOINT = 'http://localhost:8889/live/whip'
+const MAX_RETRIES = 5
+const RETRY_DELAY_MS = 1000
 
 export interface WHIPClientOptions {
   onConnectionStateChange?: (state: RTCPeerConnectionState) => void
@@ -17,7 +19,6 @@ export class WHIPClient {
   }
 
   async publish(stream: MediaStream): Promise<void> {
-    console.log('[WHIP] Creating RTCPeerConnection...')
     // RTCPeerConnectionを作成
     this.pc = new RTCPeerConnection({
       iceServers: [] // ローカル接続のためICEサーバー不要
@@ -26,94 +27,74 @@ export class WHIPClient {
     // 接続状態の監視
     this.pc.onconnectionstatechange = () => {
       if (this.pc) {
-        console.log('[WHIP] Connection state:', this.pc.connectionState)
         this.options.onConnectionStateChange?.(this.pc.connectionState)
       }
     }
 
-    this.pc.oniceconnectionstatechange = () => {
-      console.log('[WHIP] ICE connection state:', this.pc?.iceConnectionState)
-    }
-
     // MediaStreamのトラックを追加
-    console.log('[WHIP] Adding tracks...')
     stream.getTracks().forEach((track) => {
-      console.log('[WHIP] Adding track:', track.kind, track.label)
       this.pc!.addTrack(track, stream)
     })
 
     // Offer SDPを作成
-    console.log('[WHIP] Creating offer...')
     const offer = await this.pc.createOffer()
     await this.pc.setLocalDescription(offer)
 
     // ICE候補の収集完了を待つ
-    console.log('[WHIP] Waiting for ICE gathering...')
     const localDescription = await this.waitForLocalDescription()
 
     if (!localDescription) {
       throw new Error('Failed to gather ICE candidates')
     }
-    console.log('[WHIP] ICE gathering complete')
 
-    // WHIPエンドポイントにOfferを送信
-    console.log('[WHIP] Sending offer to', WHIP_ENDPOINT)
-    const response = await fetch(WHIP_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/sdp'
-      },
-      body: localDescription.sdp
-    })
-
-    console.log('[WHIP] Response status:', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`WHIP request failed: ${response.status} ${errorText}`)
-    }
+    // WHIPエンドポイントにOfferを送信（リトライ付き）
+    const response = await this.sendOfferWithRetry(localDescription.sdp!)
 
     // リソースURLを保存（後で削除に使用）
     this.resourceUrl = response.headers.get('Location') || WHIP_ENDPOINT
-    console.log('[WHIP] Resource URL:', this.resourceUrl)
 
     // Answer SDPを設定
     const answerSdp = await response.text()
-    console.log('[WHIP] Setting remote description...')
     await this.pc.setRemoteDescription({
       type: 'answer',
       sdp: answerSdp
     })
-    console.log('[WHIP] Publish complete')
   }
 
-  private waitForIceGathering(): Promise<void> {
-    return new Promise((resolve) => {
-      if (!this.pc) {
-        resolve()
-        return
-      }
+  private async sendOfferWithRetry(sdp: string): Promise<Response> {
+    let lastError: Error | null = null
 
-      if (this.pc.iceGatheringState === 'complete') {
-        resolve()
-        return
-      }
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await fetch(WHIP_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/sdp'
+          },
+          body: sdp
+        })
 
-      const checkState = () => {
-        if (this.pc?.iceGatheringState === 'complete') {
-          this.pc.removeEventListener('icegatheringstatechange', checkState)
-          resolve()
+        if (response.ok) {
+          return response
         }
+
+        const errorText = await response.text()
+        lastError = new Error(`WHIP request failed: ${response.status} ${errorText}`)
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err))
       }
 
-      this.pc.addEventListener('icegatheringstatechange', checkState)
+      // 最後の試行でなければリトライ前に待機
+      if (attempt < MAX_RETRIES) {
+        await this.delay(RETRY_DELAY_MS)
+      }
+    }
 
-      // タイムアウト: 5秒
-      setTimeout(() => {
-        this.pc?.removeEventListener('icegatheringstatechange', checkState)
-        resolve()
-      }, 5000)
-    })
+    throw lastError || new Error('WHIP connection failed after retries')
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
   private waitForLocalDescription(): Promise<RTCSessionDescription | null> {

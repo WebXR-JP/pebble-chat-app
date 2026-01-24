@@ -18,7 +18,9 @@ function createWindow(): void {
       sandbox: false,
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false // localhostへのWHIP接続を許可
+      // webSecurity: false は MediaMTX (localhost:8889) へのWHIP/WebRTC接続に必要
+      // 本番環境でも localhost 接続のみのため、セキュリティリスクは限定的
+      webSecurity: false
     }
   })
 
@@ -45,6 +47,9 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.xrift.stream')
 
   // CSPを緩和してlocalhostへの接続を許可
+  // - 'unsafe-inline': React のインラインスタイルに必要
+  // - 'unsafe-eval': 開発モードのホットリロードに必要（本番ビルドでは不要だが互換性のため維持）
+  // - connect-src localhost:*: MediaMTX (WHIP/HLS) への接続に必要
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -84,7 +89,6 @@ app.on('window-all-closed', () => {
 // アプリ終了前にクリーンアップ
 app.on('before-quit', async (event) => {
   event.preventDefault()
-  console.log('Cleaning up before quit...')
   await cleanupStreaming()
   app.exit(0)
 })

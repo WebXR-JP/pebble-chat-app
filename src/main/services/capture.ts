@@ -14,34 +14,25 @@ export async function getCaptureSources(): Promise<CaptureSource[]> {
   // macOSの場合、画面収録権限をチェック
   if (process.platform === 'darwin') {
     const status = systemPreferences.getMediaAccessStatus('screen')
-    console.log('Screen recording permission status:', status)
 
     if (status !== 'granted') {
       // 権限がない場合は空配列を返す（UIで権限リクエストを促す）
-      console.log('Screen recording permission not granted')
       return []
     }
   }
 
-  try {
-    const sources = await desktopCapturer.getSources({
-      types: ['screen', 'window'],
-      thumbnailSize: { width: 320, height: 180 },
-      fetchWindowIcons: true
-    })
+  const sources = await desktopCapturer.getSources({
+    types: ['screen', 'window'],
+    thumbnailSize: { width: 320, height: 180 },
+    fetchWindowIcons: true
+  })
 
-    console.log('Got sources:', sources.length)
-
-    return sources.map((source) => ({
-      id: source.id,
-      name: source.name,
-      thumbnail: source.thumbnail.toDataURL(),
-      type: source.id.startsWith('screen:') ? 'screen' : 'window'
-    }))
-  } catch (error) {
-    console.error('Failed to get capture sources:', error)
-    throw error
-  }
+  return sources.map((source) => ({
+    id: source.id,
+    name: source.name,
+    thumbnail: source.thumbnail.toDataURL(),
+    type: source.id.startsWith('screen:') ? 'screen' : 'window'
+  }))
 }
 
 // キャプチャ開始（状態管理のみ、実際のキャプチャはレンダラーで行う）

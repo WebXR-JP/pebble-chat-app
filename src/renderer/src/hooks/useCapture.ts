@@ -62,14 +62,10 @@ export function useCapture(): UseCaptureResult {
       setIsLoading(true)
       setError(null)
 
-      console.log('[Capture] Starting capture for source:', sourceId)
-
       // メインプロセスにキャプチャ開始を通知
       await window.electronAPI.startCapture(sourceId)
-      console.log('[Capture] Main process notified')
 
       // MediaStreamを取得
-      console.log('[Capture] Getting media stream...')
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
@@ -82,32 +78,25 @@ export function useCapture(): UseCaptureResult {
           }
         } as MediaTrackConstraints
       })
-      console.log('[Capture] Media stream obtained:', stream.getTracks())
 
       mediaStreamRef.current = stream
 
       // WHIPクライアントで送信
-      console.log('[Capture] Creating WHIP client...')
       const whipClient = new WHIPClient({
         onConnectionStateChange: (state) => {
-          console.log('[Capture] Connection state changed:', state)
           setConnectionState(state)
           if (state === 'failed' || state === 'disconnected') {
             setError('WebRTC接続が切断されました')
           }
         },
         onError: (err) => {
-          console.error('[Capture] WHIP error:', err)
           setError(err.message)
         }
       })
 
       whipClientRef.current = whipClient
-      console.log('[Capture] Publishing to WHIP...')
       await whipClient.publish(stream)
-      console.log('[Capture] WHIP publish complete')
     } catch (err) {
-      console.error('[Capture] Error:', err)
       setError(err instanceof Error ? err.message : 'キャプチャ開始に失敗しました')
       await stopCapture()
     } finally {

@@ -17,17 +17,12 @@ function App() {
   const handleStartCapture = async () => {
     if (!selectedSourceId) return
 
-    // まずサーバーを起動
+    // まずサーバーを起動（MediaMTXの起動待ちはWHIPクライアントのリトライで対応）
     if (!streaming.isStreaming) {
-      console.log('[App] Starting stream server...')
       await streaming.startStream()
-      // MediaMTXの起動を待つ
-      console.log('[App] Waiting for MediaMTX to be ready...')
-      await new Promise((resolve) => setTimeout(resolve, 2000))
     }
 
     // キャプチャ開始
-    console.log('[App] Starting capture...')
     await capture.startCapture(selectedSourceId)
   }
 
