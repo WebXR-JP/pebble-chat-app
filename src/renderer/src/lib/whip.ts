@@ -31,9 +31,18 @@ export class WHIPClient {
       }
     }
 
-    // MediaStreamのトラックを追加
+    // MediaStreamのトラックを追加（H.264を優先）
     stream.getTracks().forEach((track) => {
-      this.pc!.addTrack(track, stream)
+      if (track.kind === 'video') {
+        const transceiver = this.pc!.addTransceiver(track, {
+          direction: 'sendonly',
+          streams: [stream]
+        })
+        // H.264を優先するようにコーデックを設定
+        this.preferH264Codec(transceiver)
+      } else {
+        this.pc!.addTrack(track, stream)
+      }
     })
 
     // Offer SDPを作成
@@ -95,6 +104,28 @@ export class WHIPClient {
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  // H.264コーデックを優先するように設定
+  private preferH264Codec(transceiver: RTCRtpTransceiver): void {
+    try {
+      const codecs = RTCRtpSender.getCapabilities?.('video')?.codecs
+      if (!codecs) return
+
+      // H.264コーデックを優先順位の最初に配置
+      const h264Codecs = codecs.filter(
+        (codec) => codec.mimeType.toLowerCase() === 'video/h264'
+      )
+      const otherCodecs = codecs.filter(
+        (codec) => codec.mimeType.toLowerCase() !== 'video/h264'
+      )
+
+      if (h264Codecs.length > 0) {
+        transceiver.setCodecPreferences([...h264Codecs, ...otherCodecs])
+      }
+    } catch {
+      // H.264が利用できない場合はデフォルトのコーデックを使用
+    }
   }
 
   private waitForLocalDescription(): Promise<RTCSessionDescription | null> {
