@@ -27,12 +27,21 @@ export async function getCaptureSources(): Promise<CaptureSource[]> {
     fetchWindowIcons: true
   })
 
-  return sources.map((source) => ({
-    id: source.id,
-    name: source.name,
-    thumbnail: source.thumbnail.toDataURL(),
-    type: source.id.startsWith('screen:') ? 'screen' : 'window'
-  }))
+  return sources.map((source) => {
+    // サムネイルが空の場合は空文字を返す（UI側でプレースホルダー表示）
+    let thumbnail = ''
+    if (!source.thumbnail.isEmpty()) {
+      // toPNG()でBufferに変換してからBase64データURLを生成
+      const pngBuffer = source.thumbnail.toPNG()
+      thumbnail = `data:image/png;base64,${pngBuffer.toString('base64')}`
+    }
+    return {
+      id: source.id,
+      name: source.name,
+      thumbnail,
+      type: source.id.startsWith('screen:') ? 'screen' : 'window'
+    }
+  })
 }
 
 // キャプチャ開始（状態管理のみ、実際のキャプチャはレンダラーで行う）

@@ -50,12 +50,13 @@ app.whenReady().then(() => {
   // - 'unsafe-inline': React のインラインスタイルに必要
   // - 'unsafe-eval': 開発モードのホットリロードに必要（本番ビルドでは不要だが互換性のため維持）
   // - connect-src localhost:*: MediaMTX (WHIP/HLS) への接続に必要
+  // - img-src data:: サムネイルのBase64画像表示に必要
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:* ws://localhost:*"
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:"
         ]
       }
     })
