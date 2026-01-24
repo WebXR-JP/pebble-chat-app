@@ -171,14 +171,16 @@ function App() {
             {/* URL表示 */}
             <UrlDisplay streamInfo={streaming.streamInfo} mode={streamMode} />
 
-            {/* 停止ボタン */}
-            <button
-              style={styles.stopButton}
-              onClick={handleStop}
-              disabled={isLoading}
-            >
-              {isLoading ? '停止中...' : '配信停止'}
-            </button>
+            {/* 停止/接続中ボタン */}
+            {isLoading && !capture.isCapturing && !streaming.isStreaming ? (
+              <button style={styles.connectingButton} disabled>
+                接続中...
+              </button>
+            ) : (
+              <button style={styles.stopButton} onClick={handleStop}>
+                配信停止
+              </button>
+            )}
           </div>
         )}
 
@@ -348,6 +350,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: 'none',
     borderRadius: '10px',
     cursor: 'pointer',
+    marginTop: 'auto'
+  },
+  connectingButton: {
+    padding: '16px 32px',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: 'white',
+    backgroundColor: '#9e9e9e',
+    border: 'none',
+    borderRadius: '10px',
+    cursor: 'not-allowed',
     marginTop: 'auto'
   },
   error: {
