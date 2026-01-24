@@ -20,17 +20,25 @@ export function useSetup(): UseSetupResult {
 
   const isReady = progress.mediamtx === 'ready' && progress.cloudflared === 'ready'
 
-  // 初回チェック
+  // 初回チェック＆自動インストール
   useEffect(() => {
-    const checkSetup = async () => {
+    const checkAndInstall = async () => {
       try {
         const result = await window.electronAPI.checkSetup()
         setProgress(result)
+
+        // 未インストールなら自動でインストール開始
+        if (result.mediamtx === 'pending' || result.cloudflared === 'pending') {
+          setIsLoading(true)
+          await window.electronAPI.installBinaries()
+          setIsLoading(false)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err))
+        setIsLoading(false)
       }
     }
-    checkSetup()
+    checkAndInstall()
   }, [])
 
   // 進捗更新を監視

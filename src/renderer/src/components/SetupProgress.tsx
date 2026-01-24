@@ -58,9 +58,9 @@ export function SetupProgress({ progress, isLoading, error, onInstall }: Props) 
 
       {error && <p style={styles.error}>{error}</p>}
 
-      {(progress.mediamtx !== 'ready' || progress.cloudflared !== 'ready') && (
-        <button style={styles.button} onClick={onInstall} disabled={isLoading}>
-          {isLoading ? 'インストール中...' : 'インストール'}
+      {error && !isLoading && (
+        <button style={styles.button} onClick={onInstall}>
+          リトライ
         </button>
       )}
     </div>
