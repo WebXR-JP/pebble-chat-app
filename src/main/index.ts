@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerAllHandlers, cleanupStreaming } from './ipc'
@@ -17,7 +17,8 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      webSecurity: false // localhostへのWHIP接続を許可
     }
   })
 
@@ -42,6 +43,18 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Electron開発ツールの設定
   electronApp.setAppUserModelId('com.xrift.stream')
+
+  // CSPを緩和してlocalhostへの接続を許可
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:* ws://localhost:*"
+        ]
+      }
+    })
+  })
 
   // 開発時のF12でDevTools、本番時は無効化
   app.on('browser-window-created', (_, window) => {

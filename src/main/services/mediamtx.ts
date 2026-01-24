@@ -128,7 +128,7 @@ export function getMediaMTXStatus(): MediaMTXStatus {
 // ヘルスチェック（HLSエンドポイントに接続確認）
 export async function checkMediaMTXHealth(): Promise<boolean> {
   try {
-    const response = await fetch('http://localhost:8888/live/index.m3u8', {
+    const response = await fetch('http://localhost:8888/live_hls/index.m3u8', {
       method: 'HEAD'
     })
     // 404も正常（配信がまだないだけ）

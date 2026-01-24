@@ -17,6 +17,7 @@ export class WHIPClient {
   }
 
   async publish(stream: MediaStream): Promise<void> {
+    console.log('[WHIP] Creating RTCPeerConnection...')
     // RTCPeerConnectionを作成
     this.pc = new RTCPeerConnection({
       iceServers: [] // ローカル接続のためICEサーバー不要
@@ -25,30 +26,38 @@ export class WHIPClient {
     // 接続状態の監視
     this.pc.onconnectionstatechange = () => {
       if (this.pc) {
+        console.log('[WHIP] Connection state:', this.pc.connectionState)
         this.options.onConnectionStateChange?.(this.pc.connectionState)
       }
     }
 
+    this.pc.oniceconnectionstatechange = () => {
+      console.log('[WHIP] ICE connection state:', this.pc?.iceConnectionState)
+    }
+
     // MediaStreamのトラックを追加
+    console.log('[WHIP] Adding tracks...')
     stream.getTracks().forEach((track) => {
+      console.log('[WHIP] Adding track:', track.kind, track.label)
       this.pc!.addTrack(track, stream)
     })
 
-    // ICE候補の収集完了を待つ
-    await this.waitForIceGathering()
-
     // Offer SDPを作成
+    console.log('[WHIP] Creating offer...')
     const offer = await this.pc.createOffer()
     await this.pc.setLocalDescription(offer)
 
     // ICE候補の収集完了を待つ
+    console.log('[WHIP] Waiting for ICE gathering...')
     const localDescription = await this.waitForLocalDescription()
 
     if (!localDescription) {
       throw new Error('Failed to gather ICE candidates')
     }
+    console.log('[WHIP] ICE gathering complete')
 
     // WHIPエンドポイントにOfferを送信
+    console.log('[WHIP] Sending offer to', WHIP_ENDPOINT)
     const response = await fetch(WHIP_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -57,6 +66,8 @@ export class WHIPClient {
       body: localDescription.sdp
     })
 
+    console.log('[WHIP] Response status:', response.status)
+
     if (!response.ok) {
       const errorText = await response.text()
       throw new Error(`WHIP request failed: ${response.status} ${errorText}`)
@@ -64,13 +75,16 @@ export class WHIPClient {
 
     // リソースURLを保存（後で削除に使用）
     this.resourceUrl = response.headers.get('Location') || WHIP_ENDPOINT
+    console.log('[WHIP] Resource URL:', this.resourceUrl)
 
     // Answer SDPを設定
     const answerSdp = await response.text()
+    console.log('[WHIP] Setting remote description...')
     await this.pc.setRemoteDescription({
       type: 'answer',
       sdp: answerSdp
     })
+    console.log('[WHIP] Publish complete')
   }
 
   private waitForIceGathering(): Promise<void> {

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, desktopCapturer } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { IPC_CHANNELS, ElectronAPI, SetupProgress, StreamInfo, CaptureInfo, CaptureSource } from '../shared/types'
 
 const electronAPI: ElectronAPI = {
@@ -32,20 +32,8 @@ const electronAPI: ElectronAPI = {
   getStreamStatus: () => ipcRenderer.invoke(IPC_CHANNELS.STREAM_STATUS),
 
   // キャプチャ
-  getCaptureSources: async (): Promise<CaptureSource[]> => {
-    const sources = await desktopCapturer.getSources({
-      types: ['screen', 'window'],
-      thumbnailSize: { width: 320, height: 180 },
-      fetchWindowIcons: true
-    })
-
-    return sources.map((source) => ({
-      id: source.id,
-      name: source.name,
-      thumbnail: source.thumbnail.toDataURL(),
-      type: source.id.startsWith('screen:') ? 'screen' : 'window'
-    }))
-  },
+  getCaptureSources: (): Promise<CaptureSource[]> =>
+    ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_GET_SOURCES),
 
   startCapture: (sourceId: string) => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_START, sourceId),
 
