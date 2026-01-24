@@ -31,6 +31,8 @@ function App() {
 
   const handleStopCapture = async () => {
     await capture.stopCapture()
+    // キャプチャ停止時にサーバーも停止
+    await streaming.stopStream()
   }
 
   const handleStartObs = async () => {
