@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { SetupProgress } from './components/SetupProgress'
 import { UrlDisplay } from './components/UrlDisplay'
 import { SourceSelectModal } from './components/SourceSelectModal'
@@ -68,23 +68,8 @@ function App() {
   const isStreaming = capture.isCapturing || streaming.isStreaming
   const isLoading = capture.isLoading || streaming.isLoading
 
-  // コンテンツに応じてウィンドウサイズを調整
-  const containerRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const resizeWindow = () => {
-      if (containerRef.current) {
-        const height = containerRef.current.scrollHeight + 48 // padding分を追加
-        const clampedHeight = Math.max(400, Math.min(height, 800)) // 400〜800の範囲
-        window.electronAPI.resizeWindow(clampedHeight)
-      }
-    }
-    // 少し遅延させてDOMが更新されてから計測
-    const timer = setTimeout(resizeWindow, 100)
-    return () => clearTimeout(timer)
-  }, [appState, setup.isReady, streaming.streamInfo.publicUrl])
-
   return (
-    <div ref={containerRef} style={styles.container}>
+    <div style={styles.container}>
       <header style={styles.header}>
         <h1 style={styles.title}>PebbleChat</h1>
         <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ</p>
