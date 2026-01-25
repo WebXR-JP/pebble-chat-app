@@ -7,10 +7,11 @@ import { createGunzip } from 'zlib'
 import { pipeline } from 'stream/promises'
 import { Extract } from 'unzipper'
 import * as tar from 'tar'
-import { getBinariesPath, getMediaMTXPath, getTempPath, getMediaMTXConfigPath } from '../utils/paths'
-import { getPlatform, getMediaMTXDownloadUrl, getMediaMTXBinaryName } from '../utils/platform'
+import { getBinariesPath, getMediaMTXPath, getTempPath, getMediaMTXConfigPath, getCloudflaredPath, getFFmpegPath } from '../utils/paths'
+import { getPlatform, getMediaMTXDownloadUrl, getMediaMTXBinaryName, getCloudflaredDownloadUrl, getCloudflaredBinaryName } from '../utils/platform'
 
 const MEDIAMTX_VERSION = '1.9.3'
+const CLOUDFLARED_VERSION = '2024.12.2'
 
 // MediaMTXがインストール済みか確認
 export async function isMediaMTXInstalled(): Promise<boolean> {
@@ -20,6 +21,72 @@ export async function isMediaMTXInstalled(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+// cloudflaredがインストール済みか確認
+export async function isCloudflaredInstalled(): Promise<boolean> {
+  try {
+    await fsp.access(getCloudflaredPath(), fs.constants.X_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// cloudflaredをダウンロード・インストール
+export async function installCloudflared(
+  onProgress?: (message: string) => void
+): Promise<void> {
+  const binPath = getBinariesPath()
+  const tempPath = getTempPath()
+  const platform = getPlatform()
+
+  // ディレクトリ作成
+  await fsp.mkdir(binPath, { recursive: true })
+  await fsp.mkdir(tempPath, { recursive: true })
+
+  const downloadUrl = getCloudflaredDownloadUrl(CLOUDFLARED_VERSION)
+
+  onProgress?.('cloudflaredをダウンロード中...')
+
+  if (platform === 'win32') {
+    // Windowsは直接exeをダウンロード
+    await downloadFile(downloadUrl, getCloudflaredPath())
+  } else if (platform === 'darwin') {
+    // macOSはtgzをダウンロードして展開
+    const archivePath = path.join(tempPath, 'cloudflared.tgz')
+    await downloadFile(downloadUrl, archivePath)
+
+    onProgress?.('cloudflaredを展開中...')
+    await extractTgz(archivePath, binPath)
+
+    // 一時ファイル削除
+    await fsp.rm(archivePath, { force: true })
+  } else {
+    // Linuxは直接バイナリをダウンロード
+    await downloadFile(downloadUrl, getCloudflaredPath())
+  }
+
+  // macOSの場合、Gatekeeper対応
+  if (platform === 'darwin') {
+    onProgress?.('Gatekeeper対応中...')
+    await removeQuarantine(getCloudflaredPath())
+  }
+
+  // 実行権限付与
+  if (platform !== 'win32') {
+    await fsp.chmod(getCloudflaredPath(), 0o755)
+  }
+
+  onProgress?.('cloudflaredのインストール完了')
+}
+
+// tgz展開（cloudflared用）
+async function extractTgz(archivePath: string, destPath: string): Promise<void> {
+  await tar.extract({
+    file: archivePath,
+    cwd: destPath
+  })
 }
 
 // MediaMTXをダウンロード・インストール
@@ -63,8 +130,8 @@ export async function installMediaMTX(
     await fsp.chmod(getMediaMTXPath(), 0o755)
   }
 
-  // 設定ファイルをコピー
-  await copyMediaMTXConfig()
+  // 設定ファイルを生成
+  await updateMediaMTXConfig()
 
   // 一時ファイル削除
   await fsp.rm(archivePath, { force: true })
@@ -140,8 +207,14 @@ async function removeQuarantine(filePath: string): Promise<void> {
   })
 }
 
-// MediaMTX設定ファイルをコピー
-async function copyMediaMTXConfig(): Promise<void> {
+// MediaMTX設定ファイルを生成（FFmpegパスを動的に検出）
+export async function updateMediaMTXConfig(): Promise<void> {
+  // FFmpegのパスを検出
+  const ffmpegPath = getFFmpegPath()
+  const ffmpegCommand = ffmpegPath || 'ffmpeg' // 見つからない場合はffmpegを使う（PATHにあることを期待）
+
+  console.log('[Binary] FFmpeg path detected:', ffmpegPath || 'not found, using default')
+
   const configContent = `
 # MediaMTX Configuration for XRift Stream
 
@@ -181,7 +254,7 @@ srt: no
 paths:
   live:
     # WebRTC入力後、FFmpegでH.264に変換（低遅延設定）
-    runOnReady: ffmpeg -fflags nobuffer -flags low_delay -i rtsp://localhost:8554/live -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -f flv rtmp://localhost:1935/live_hls
+    runOnReady: ${ffmpegCommand} -fflags nobuffer -flags low_delay -i rtsp://localhost:8554/live -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -f flv rtmp://localhost:1935/live_hls
     runOnReadyRestart: yes
 
   live_hls:

@@ -1,7 +1,10 @@
-import { Tunnel, install, bin } from 'cloudflared'
-import fs from 'fs'
+import { spawn, ChildProcess } from 'child_process'
+import { getCloudflaredPath } from '../utils/paths'
 
-let tunnelInstance: Tunnel | null = null
+// binary.tsからエクスポートを再エクスポート
+export { isCloudflaredInstalled, installCloudflared } from './binary'
+
+let tunnelProcess: ChildProcess | null = null
 let publicUrl: string | null = null
 
 export interface TunnelStatus {
@@ -10,37 +13,9 @@ export interface TunnelStatus {
   error: string | null
 }
 
-// cloudflaredバイナリが利用可能か確認
-export async function isCloudflaredInstalled(): Promise<boolean> {
-  try {
-    // binはcloudflaredバイナリのパスを指す文字列
-    // ファイルが存在するかチェック
-    return fs.existsSync(bin)
-  } catch {
-    return false
-  }
-}
-
-// cloudflaredをインストール
-export async function installCloudflared(
-  onProgress?: (message: string) => void
-): Promise<void> {
-  onProgress?.('cloudflaredをインストール中...')
-
-  try {
-    // デフォルトの場所にインストール
-    await install(bin)
-    onProgress?.('cloudflaredのインストール完了')
-  } catch (error) {
-    throw new Error(
-      `cloudflaredのインストールに失敗しました: ${error instanceof Error ? error.message : String(error)}`
-    )
-  }
-}
-
 // Quick Tunnelを開始（HLSサーバーを外部公開）
 export async function startTunnel(localPort: number = 8888): Promise<TunnelStatus> {
-  if (tunnelInstance) {
+  if (tunnelProcess) {
     return {
       running: true,
       url: publicUrl,
@@ -61,14 +36,14 @@ export async function startTunnel(localPort: number = 8888): Promise<TunnelStatu
     // タイムアウト（30秒）
     const timeout = setTimeout(() => {
       console.error('[Tunnel] Timeout waiting for URL')
-      if (tunnelInstance) {
+      if (tunnelProcess) {
         try {
-          tunnelInstance.stop()
+          tunnelProcess.kill()
         } catch {
           // ignore
         }
       }
-      tunnelInstance = null
+      tunnelProcess = null
       publicUrl = null
       doResolve({
         running: false,
@@ -78,41 +53,58 @@ export async function startTunnel(localPort: number = 8888): Promise<TunnelStatu
     }, 30000)
 
     try {
-      // Quick Tunnelを作成
-      tunnelInstance = Tunnel.quick(`http://localhost:${localPort}`)
+      const cloudflaredPath = getCloudflaredPath()
+      console.log('[Tunnel] Starting cloudflared from:', cloudflaredPath)
 
-      // URLを取得
-      tunnelInstance.on('url', (url) => {
-        clearTimeout(timeout)
-        publicUrl = url
-        console.log('[Tunnel] Started with URL:', publicUrl)
-
-        doResolve({
-          running: true,
-          url: publicUrl,
-          error: null
-        })
+      tunnelProcess = spawn(cloudflaredPath, ['tunnel', '--url', `http://localhost:${localPort}`], {
+        stdio: ['ignore', 'pipe', 'pipe']
       })
 
-      // エラー処理
-      tunnelInstance.on('error', (error) => {
-        clearTimeout(timeout)
-        console.error('[Tunnel] Error:', error)
-        tunnelInstance = null
-        publicUrl = null
+      // 標準出力を監視
+      tunnelProcess.stdout?.on('data', (data: Buffer) => {
+        const output = data.toString()
+        console.log('[Tunnel stdout]', output)
 
-        doResolve({
-          running: false,
-          url: null,
-          error: error.message
-        })
+        // URLを抽出
+        const urlMatch = output.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)
+        if (urlMatch) {
+          clearTimeout(timeout)
+          publicUrl = urlMatch[0]
+          console.log('[Tunnel] Started with URL:', publicUrl)
+
+          doResolve({
+            running: true,
+            url: publicUrl,
+            error: null
+          })
+        }
+      })
+
+      // 標準エラー出力を監視（cloudflaredはURLをstderrに出力することもある）
+      tunnelProcess.stderr?.on('data', (data: Buffer) => {
+        const output = data.toString()
+        console.log('[Tunnel stderr]', output)
+
+        // URLを抽出
+        const urlMatch = output.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)
+        if (urlMatch) {
+          clearTimeout(timeout)
+          publicUrl = urlMatch[0]
+          console.log('[Tunnel] Started with URL:', publicUrl)
+
+          doResolve({
+            running: true,
+            url: publicUrl,
+            error: null
+          })
+        }
       })
 
       // プロセス終了を監視
-      tunnelInstance.on('exit', (code, signal) => {
+      tunnelProcess.on('close', (code, signal) => {
         clearTimeout(timeout)
         console.log(`[Tunnel] Process exited with code ${code}, signal ${signal}`)
-        tunnelInstance = null
+        tunnelProcess = null
         publicUrl = null
 
         // URLが取得される前に終了した場合
@@ -122,9 +114,22 @@ export async function startTunnel(localPort: number = 8888): Promise<TunnelStatu
           error: `Tunnelプロセスが終了しました (code: ${code})`
         })
       })
+
+      tunnelProcess.on('error', (err) => {
+        clearTimeout(timeout)
+        console.error('[Tunnel] Process error:', err)
+        tunnelProcess = null
+        publicUrl = null
+
+        doResolve({
+          running: false,
+          url: null,
+          error: err.message
+        })
+      })
     } catch (error) {
       clearTimeout(timeout)
-      tunnelInstance = null
+      tunnelProcess = null
       publicUrl = null
 
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -141,30 +146,48 @@ export async function startTunnel(localPort: number = 8888): Promise<TunnelStatu
 
 // Tunnelを停止
 export async function stopTunnel(): Promise<void> {
-  if (!tunnelInstance) {
+  if (!tunnelProcess) {
     return
   }
 
-  try {
-    tunnelInstance.stop()
-  } catch (error) {
-    console.error('[Tunnel] Error stopping:', error)
-    // 強制終了
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      // タイムアウトしたら強制終了
+      if (tunnelProcess) {
+        try {
+          tunnelProcess.kill('SIGKILL')
+        } catch {
+          // ignore
+        }
+      }
+      tunnelProcess = null
+      publicUrl = null
+      resolve()
+    }, 3000)
+
+    tunnelProcess.on('close', () => {
+      clearTimeout(timeout)
+      tunnelProcess = null
+      publicUrl = null
+      resolve()
+    })
+
     try {
-      tunnelInstance.process.kill('SIGKILL')
-    } catch {
-      // ignore
+      tunnelProcess.kill('SIGTERM')
+    } catch (error) {
+      console.error('[Tunnel] Error stopping:', error)
+      clearTimeout(timeout)
+      tunnelProcess = null
+      publicUrl = null
+      resolve()
     }
-  } finally {
-    tunnelInstance = null
-    publicUrl = null
-  }
+  })
 }
 
 // Tunnelの状態を取得
 export function getTunnelStatus(): TunnelStatus {
   return {
-    running: tunnelInstance !== null,
+    running: tunnelProcess !== null,
     url: publicUrl,
     error: null
   }

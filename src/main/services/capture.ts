@@ -42,41 +42,44 @@ export async function openScreenRecordingSettings(): Promise<void> {
 
 // キャプチャソース一覧を取得（権限状態を含む）
 export async function getCaptureSources(): Promise<CaptureSourcesResult> {
-  const permission = getScreenRecordingPermissionStatus()
+  // まず実際にソースを取得してみる（権限チェックより信頼性が高い）
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+      fetchWindowIcons: true
+    })
 
-  // macOSで権限がない場合は空配列を返す
-  if (process.platform === 'darwin' && permission !== 'granted') {
-    return {
-      sources: [],
-      permission
+    // ソースが取得できれば権限あり
+    if (sources.length > 0) {
+      const captureSourceList: CaptureSource[] = sources.map((source) => {
+        let thumbnail = ''
+        if (!source.thumbnail.isEmpty()) {
+          const pngBuffer = source.thumbnail.toPNG()
+          thumbnail = `data:image/png;base64,${pngBuffer.toString('base64')}`
+        }
+        return {
+          id: source.id,
+          name: source.name,
+          thumbnail,
+          type: source.id.startsWith('screen:') ? 'screen' : 'window'
+        }
+      })
+
+      return {
+        sources: captureSourceList,
+        permission: 'granted'
+      }
     }
+  } catch (error) {
+    console.error('[Capture] Failed to get sources:', error)
   }
 
-  const sources = await desktopCapturer.getSources({
-    types: ['screen', 'window'],
-    thumbnailSize: { width: 320, height: 180 },
-    fetchWindowIcons: true
-  })
-
-  const captureSourceList: CaptureSource[] = sources.map((source) => {
-    // サムネイルが空の場合は空文字を返す（UI側でプレースホルダー表示）
-    let thumbnail = ''
-    if (!source.thumbnail.isEmpty()) {
-      // toPNG()でBufferに変換してからBase64データURLを生成
-      const pngBuffer = source.thumbnail.toPNG()
-      thumbnail = `data:image/png;base64,${pngBuffer.toString('base64')}`
-    }
-    return {
-      id: source.id,
-      name: source.name,
-      thumbnail,
-      type: source.id.startsWith('screen:') ? 'screen' : 'window'
-    }
-  })
-
+  // ソースが取得できない場合は権限状態を確認
+  const permission = getScreenRecordingPermissionStatus()
   return {
-    sources: captureSourceList,
-    permission
+    sources: [],
+    permission: permission === 'granted' ? 'denied' : permission
   }
 }
 

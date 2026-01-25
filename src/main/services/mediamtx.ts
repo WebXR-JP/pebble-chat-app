@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process'
 import { getMediaMTXPath, getMediaMTXConfigPath } from '../utils/paths'
+import { updateMediaMTXConfig } from './binary'
 
 let mediamtxProcess: ChildProcess | null = null
 
@@ -17,6 +18,13 @@ export async function startMediaMTX(): Promise<MediaMTXStatus> {
       pid: mediamtxProcess.pid ?? null,
       error: null
     }
+  }
+
+  // 起動前に設定ファイルを再生成（FFmpegパスを最新に）
+  try {
+    await updateMediaMTXConfig()
+  } catch (error) {
+    console.error('[MediaMTX] Failed to update config:', error)
   }
 
   return new Promise((resolve) => {

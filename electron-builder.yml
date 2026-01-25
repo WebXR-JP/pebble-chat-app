@@ -11,6 +11,9 @@ extraMetadata:
 mac:
   category: public.app-category.video
   icon: resources/icon.png
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  hardenedRuntime: false
   target:
     - target: dmg
       arch:
