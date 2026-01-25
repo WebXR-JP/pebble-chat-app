@@ -71,6 +71,9 @@ function App() {
 
   return (
     <div style={styles.container}>
+      {/* ドラッグ領域（常に表示） */}
+      <div style={styles.dragRegion} />
+
       {appState !== 'streaming' && (
         <header style={styles.header}>
           <img src={logoImage} alt="PebbleChat" style={styles.logo} />
@@ -239,6 +242,7 @@ const colors = {
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
+    position: 'relative',
     display: 'flex',
     flexDirection: 'column',
     padding: '24px',
@@ -246,6 +250,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     background: `linear-gradient(180deg, ${colors.bgPrimary} 0%, ${colors.bgSecondary} 100%)`,
     minHeight: '100vh'
+  },
+  dragRegion: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '32px',
+    // @ts-expect-error: WebKit specific property for draggable region
+    WebkitAppRegion: 'drag'
   },
   header: {
     textAlign: 'center',

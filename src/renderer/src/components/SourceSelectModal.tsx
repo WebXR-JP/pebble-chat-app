@@ -125,8 +125,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: 'rgba(61, 61, 61, 0.4)',
     backdropFilter: 'blur(4px)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
+    paddingTop: '48px',
+    paddingBottom: '24px',
     zIndex: 1000
   },
   modal: {
@@ -134,17 +136,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '18px',
     width: '90%',
     maxWidth: '480px',
-    maxHeight: '80vh',
+    maxHeight: 'calc(100vh - 72px)',
     display: 'flex',
     flexDirection: 'column',
     boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1)',
-    border: `1px solid ${colors.border}`
+    border: `1px solid ${colors.border}`,
+    // @ts-expect-error: WebKit specific property
+    WebkitAppRegion: 'no-drag'
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '18px 22px',
+    padding: '12px 18px',
     borderBottom: `1px solid ${colors.border}`,
     backgroundColor: colors.bgPrimary,
     borderRadius: '18px 18px 0 0'
@@ -164,7 +168,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '8px',
     cursor: 'pointer',
     color: colors.textSecondary,
-    transition: 'all 0.2s ease'
+    transition: 'all 0.2s ease',
+    // @ts-expect-error: WebKit specific property
+    WebkitAppRegion: 'no-drag'
   },
   sourceList: {
     flex: 1,
@@ -284,7 +290,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 500
   },
   footer: {
-    padding: '14px 22px',
+    padding: '10px 18px',
     borderTop: `1px solid ${colors.border}`,
     display: 'flex',
     justifyContent: 'flex-end',
@@ -292,12 +298,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '0 0 18px 18px'
   },
   cancelButton: {
-    padding: '10px 20px',
-    fontSize: '13px',
+    padding: '7px 14px',
+    fontSize: '12px',
     fontWeight: 500,
     backgroundColor: colors.white,
     border: `1px solid ${colors.border}`,
-    borderRadius: '10px',
+    borderRadius: '8px',
     cursor: 'pointer',
     color: colors.textSecondary,
     transition: 'all 0.2s ease'
