@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import logoImage from './assets/logo.png'
 import { SetupProgress } from './components/SetupProgress'
 import { UrlDisplay } from './components/UrlDisplay'
 import { SourceSelectModal } from './components/SourceSelectModal'
@@ -71,7 +72,7 @@ function App() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>PebbleChat</h1>
+        <img src={logoImage} alt="PebbleChat" style={styles.logo} />
         <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ</p>
       </header>
 
@@ -251,12 +252,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     // @ts-expect-error: WebKit specific property for draggable region
     WebkitAppRegion: 'drag'
   },
-  title: {
-    margin: 0,
-    fontSize: '26px',
-    fontWeight: 700,
-    color: colors.stoneDark,
-    letterSpacing: '-0.5px'
+  logo: {
+    height: '64px'
   },
   subtitle: {
     margin: '6px 0 0 0',
