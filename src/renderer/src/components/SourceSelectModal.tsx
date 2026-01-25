@@ -1,5 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { CaptureSource, ScreenRecordingPermission } from '../../../shared/types'
+
+type TabType = 'screen' | 'window'
 
 interface Props {
   sources: CaptureSource[]
@@ -20,8 +22,14 @@ export function SourceSelectModal({
   onCancel,
   onOpenSettings
 }: Props) {
+  const [activeTab, setActiveTab] = useState<TabType>('screen')
+
   // 権限がない場合のメッセージ
   const needsPermission = permission !== 'granted' && permission !== 'unknown'
+
+  // タブでフィルタリングしたソース
+  const filteredSources = sources.filter((source) => source.type === activeTab)
+
   // モーダル表示時にソース一覧を取得
   useEffect(() => {
     onRefresh()
@@ -37,8 +45,30 @@ export function SourceSelectModal({
           </button>
         </div>
 
+        {/* タブ */}
+        <div style={styles.tabContainer}>
+          <button
+            style={{
+              ...styles.tab,
+              ...(activeTab === 'screen' ? styles.tabActive : styles.tabInactive)
+            }}
+            onClick={() => setActiveTab('screen')}
+          >
+            画面
+          </button>
+          <button
+            style={{
+              ...styles.tab,
+              ...(activeTab === 'window' ? styles.tabActive : styles.tabInactive)
+            }}
+            onClick={() => setActiveTab('window')}
+          >
+            ウィンドウ
+          </button>
+        </div>
+
         <div style={styles.sourceList}>
-          {isLoading && sources.length === 0 ? (
+          {isLoading && filteredSources.length === 0 ? (
             <p style={styles.loadingText}>読み込み中...</p>
           ) : needsPermission ? (
             <div style={styles.permissionContainer}>
@@ -56,10 +86,10 @@ export function SourceSelectModal({
                 設定後、このアプリを再起動してください。
               </p>
             </div>
-          ) : sources.length === 0 ? (
-            <p style={styles.emptyText}>キャプチャソースが見つかりません</p>
+          ) : filteredSources.length === 0 ? (
+            <p style={styles.emptyText}>{activeTab === 'screen' ? '画面' : 'ウィンドウ'}が見つかりません</p>
           ) : (
-            sources.map((source) => (
+            filteredSources.map((source) => (
               <div
                 key={source.id}
                 style={styles.sourceItem}
@@ -136,7 +166,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '18px',
     width: '90%',
     maxWidth: '480px',
-    maxHeight: 'calc(100vh - 72px)',
+    height: 'calc(100vh - 72px)',
     display: 'flex',
     flexDirection: 'column',
     boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1)',
@@ -171,6 +201,33 @@ const styles: { [key: string]: React.CSSProperties } = {
     transition: 'all 0.2s ease',
     // @ts-expect-error: WebKit specific property
     WebkitAppRegion: 'no-drag'
+  },
+  tabContainer: {
+    display: 'flex',
+    padding: '0 14px',
+    gap: '4px',
+    borderBottom: `1px solid ${colors.border}`,
+    backgroundColor: colors.bgPrimary
+  },
+  tab: {
+    flex: 1,
+    padding: '10px 16px',
+    fontSize: '13px',
+    fontWeight: 500,
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    cursor: 'pointer',
+    color: colors.textSecondary,
+    transition: 'all 0.2s ease'
+  },
+  tabActive: {
+    color: colors.accent,
+    borderBottomColor: colors.accent
+  },
+  tabInactive: {
+    color: colors.textSecondary,
+    borderBottomColor: 'transparent'
   },
   sourceList: {
     flex: 1,
