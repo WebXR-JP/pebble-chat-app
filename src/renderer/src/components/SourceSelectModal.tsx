@@ -1,21 +1,27 @@
 import { useEffect } from 'react'
-import { CaptureSource } from '../../../shared/types'
+import { CaptureSource, ScreenRecordingPermission } from '../../../shared/types'
 
 interface Props {
   sources: CaptureSource[]
   isLoading: boolean
+  permission: ScreenRecordingPermission
   onRefresh: () => void
   onSelect: (sourceId: string) => void
   onCancel: () => void
+  onOpenSettings: () => void
 }
 
 export function SourceSelectModal({
   sources,
   isLoading,
+  permission,
   onRefresh,
   onSelect,
-  onCancel
+  onCancel,
+  onOpenSettings
 }: Props) {
+  // 権限がない場合のメッセージ
+  const needsPermission = permission !== 'granted' && permission !== 'unknown'
   // モーダル表示時にソース一覧を取得
   useEffect(() => {
     onRefresh()
@@ -34,6 +40,22 @@ export function SourceSelectModal({
         <div style={styles.sourceList}>
           {isLoading && sources.length === 0 ? (
             <p style={styles.loadingText}>読み込み中...</p>
+          ) : needsPermission ? (
+            <div style={styles.permissionContainer}>
+              <div style={styles.permissionIcon}>!</div>
+              <h4 style={styles.permissionTitle}>画面収録の権限が必要です</h4>
+              <p style={styles.permissionText}>
+                このアプリで画面をキャプチャするには、
+                <br />
+                システム設定で権限を許可してください。
+              </p>
+              <button style={styles.settingsButton} onClick={onOpenSettings}>
+                システム設定を開く
+              </button>
+              <p style={styles.permissionNote}>
+                設定後、このアプリを再起動してください。
+              </p>
+            </div>
           ) : sources.length === 0 ? (
             <p style={styles.emptyText}>キャプチャソースが見つかりません</p>
           ) : (
@@ -133,6 +155,53 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#666',
     padding: '40px 0'
   },
+  permissionContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '32px 20px',
+    textAlign: 'center'
+  },
+  permissionIcon: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '50%',
+    backgroundColor: '#FEF3C7',
+    color: '#D97706',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '24px',
+    fontWeight: 'bold',
+    marginBottom: '16px'
+  },
+  permissionTitle: {
+    margin: '0 0 8px 0',
+    fontSize: '15px',
+    fontWeight: 600,
+    color: '#333'
+  },
+  permissionText: {
+    margin: '0 0 20px 0',
+    fontSize: '13px',
+    color: '#666',
+    lineHeight: 1.5
+  },
+  settingsButton: {
+    padding: '10px 20px',
+    fontSize: '13px',
+    fontWeight: 500,
+    backgroundColor: '#3B82F6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer'
+  },
+  permissionNote: {
+    marginTop: '16px',
+    fontSize: '12px',
+    color: '#999'
+  },
   sourceItem: {
     display: 'flex',
     alignItems: 'center',
@@ -140,10 +209,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '10px 12px',
     borderRadius: '8px',
     cursor: 'pointer',
-    transition: 'background-color 0.15s',
-    ':hover': {
-      backgroundColor: '#f5f5f5'
-    }
+    transition: 'background-color 0.15s'
   },
   thumbnail: {
     width: '80px',

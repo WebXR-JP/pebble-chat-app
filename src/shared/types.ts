@@ -12,6 +12,15 @@ export interface CaptureSource {
 // キャプチャ状態
 export type CaptureStatus = 'idle' | 'capturing' | 'error'
 
+// 画面収録権限の状態（macOS）
+export type ScreenRecordingPermission = 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown'
+
+// キャプチャソース取得結果（権限状態を含む）
+export interface CaptureSourcesResult {
+  sources: CaptureSource[]
+  permission: ScreenRecordingPermission
+}
+
 // キャプチャ情報
 export interface CaptureInfo {
   status: CaptureStatus
@@ -66,6 +75,7 @@ export const IPC_CHANNELS = {
   CAPTURE_START: 'capture:start',
   CAPTURE_STOP: 'capture:stop',
   CAPTURE_STATUS: 'capture:status',
+  CAPTURE_OPEN_SETTINGS: 'capture:openSettings',
 
   // 設定
   CONFIG_GET: 'config:get',
@@ -86,9 +96,10 @@ export interface ElectronAPI {
   getStreamStatus: () => Promise<StreamInfo>
 
   // キャプチャ
-  getCaptureSources: () => Promise<CaptureSource[]>
+  getCaptureSources: () => Promise<CaptureSourcesResult>
   startCapture: (sourceId: string) => Promise<CaptureInfo>
   stopCapture: () => Promise<void>
   onCaptureStatus: (callback: (info: CaptureInfo) => void) => () => void
   getCaptureStatus: () => Promise<CaptureInfo>
+  openScreenRecordingSettings: () => Promise<void>
 }

@@ -1,6 +1,6 @@
-# XRift Stream
+# PebbleChat
 
-VRChat / XRift 向けの簡単配信アプリ。OBSもDockerも不要、アプリ一つで配信できます。
+VRChat 向けの簡単配信アプリ。OBSもDockerも不要、アプリ一つで配信できます。
 
 ## 特徴
 
@@ -11,7 +11,7 @@ VRChat / XRift 向けの簡単配信アプリ。OBSもDockerも不要、アプ�
 
 ## 背景
 
-VRChat内でのライブ配信サービス「TopazChat」は、個人運営による持続可能性の問題を抱えています。XRift Streamは、各ユーザーが自分で配信サーバーを立てられるようにすることで、TopazChatへの負荷を分散させることを目指しています。
+VRChat内でのライブ配信サービス「TopazChat」は、個人運営による持続可能性の問題を抱えています。PebbleChatは、各ユーザーが自分で配信サーバーを立てられるようにすることで、TopazChatへの負荷を分散させることを目指しています。
 
 ## 使い方
 
@@ -56,8 +56,8 @@ VRChat内でのライブ配信サービス「TopazChat」は、個人運営に�
 | サービス/方式 | 遅延 | 用途適性 |
 |-------------|------|---------|
 | TopazChat | 約1秒 | DJイベント（MC同期重要） |
-| XRift Stream (HLS) | 約4秒 | 作業配信・映像流し |
-| XRift Stream (LL-HLS) | 約2秒（目標） | トーク系イベント |
+| PebbleChat (HLS) | 約4秒 | 作業配信・映像流し |
+| PebbleChat (LL-HLS) | 約2秒（目標） | トーク系イベント |
 
 ## 開発
 

@@ -13,6 +13,7 @@ function createWindow(): void {
     minHeight: 500,
     show: false,
     autoHideMenuBar: true,
+    icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -44,7 +45,7 @@ function createWindow(): void {
 // アプリ初期化
 app.whenReady().then(() => {
   // Electron開発ツールの設定
-  electronApp.setAppUserModelId('com.xrift.stream')
+  electronApp.setAppUserModelId('com.pebblechat.app')
 
   // CSPを緩和してlocalhostへの接続を許可
   // - 'unsafe-inline': React のインラインスタイルに必要

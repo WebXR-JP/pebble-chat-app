@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron'
-import { IPC_CHANNELS, SetupProgress, StreamInfo, CaptureInfo, CaptureSource } from '../../shared/types'
+import { IPC_CHANNELS, SetupProgress, StreamInfo, CaptureInfo, CaptureSourcesResult } from '../../shared/types'
 import { isMediaMTXInstalled, installMediaMTX } from '../services/binary'
 import { startMediaMTX, stopMediaMTX, getMediaMTXStatus } from '../services/mediamtx'
 import {
@@ -15,7 +15,8 @@ import {
   startCaptureSession,
   stopCaptureSession,
   getCaptureStatus,
-  setCaptureError
+  setCaptureError,
+  openScreenRecordingSettings
 } from '../services/capture'
 
 let currentStreamInfo: StreamInfo = {
@@ -219,8 +220,13 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
   })
 
   // キャプチャソース一覧取得
-  ipcMain.handle(IPC_CHANNELS.CAPTURE_GET_SOURCES, async (): Promise<CaptureSource[]> => {
+  ipcMain.handle(IPC_CHANNELS.CAPTURE_GET_SOURCES, async (): Promise<CaptureSourcesResult> => {
     return await getCaptureSources()
+  })
+
+  // システム設定を開く
+  ipcMain.handle(IPC_CHANNELS.CAPTURE_OPEN_SETTINGS, async (): Promise<void> => {
+    await openScreenRecordingSettings()
   })
 
   // キャプチャ開始
@@ -228,18 +234,19 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
     IPC_CHANNELS.CAPTURE_START,
     async (_event, sourceId: string): Promise<CaptureInfo> => {
       const window = getMainWindow()
-      const sources = await getCaptureSources()
-      const source = sources.find((s) => s.id === sourceId)
+      const result = await getCaptureSources()
+      const source = result.sources.find((s) => s.id === sourceId)
 
       if (!source) {
+        const errorMessage = 'キャプチャソースが見つかりません'
         const errorInfo: CaptureInfo = {
           status: 'error',
           sourceId: null,
           sourceName: null,
-          error: 'キャプチャソースが見つかりません'
+          error: errorMessage
         }
         sendCaptureStatus(window, errorInfo)
-        throw new Error(errorInfo.error)
+        throw new Error(errorMessage)
       }
 
       const info = startCaptureSession(sourceId, source.name)

@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 
-XRift Stream は VRChat / XRift 向けの配信アプリです。Electronベースのデスクトップアプリで、画面キャプチャ → MediaMTX (HLS変換) → Cloudflare Quick Tunnel という経路で、簡単に配信環境を構築できます。
+PebbleChat は VRChat 向けの配信アプリです。Electronベースのデスクトップアプリで、画面キャプチャ → MediaMTX (HLS変換) → Cloudflare Quick Tunnel という経路で、簡単に配信環境を構築できます。
 
 ## 技術スタック
 
@@ -17,7 +17,7 @@ XRift Stream は VRChat / XRift 向けの配信アプリです。Electronベー�
 ## アーキテクチャ
 
 ```
-desktopCapturer → WebRTC (WHIP) → MediaMTX → HLS → Cloudflare Tunnel → iwaSync/XRift
+desktopCapturer → WebRTC (WHIP) → MediaMTX → HLS → Cloudflare Tunnel → iwaSync
 ```
 
 推奨はWebRTC (WHIP) 経由の配信（FFmpeg不要、軽量）。

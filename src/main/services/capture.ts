@@ -1,5 +1,5 @@
-import { desktopCapturer, systemPreferences } from 'electron'
-import { CaptureSource, CaptureInfo } from '../../shared/types'
+import { desktopCapturer, systemPreferences, shell } from 'electron'
+import { CaptureSource, CaptureInfo, ScreenRecordingPermission, CaptureSourcesResult } from '../../shared/types'
 
 // キャプチャ状態
 let captureInfo: CaptureInfo = {
@@ -9,15 +9,46 @@ let captureInfo: CaptureInfo = {
   error: null
 }
 
-// キャプチャソース一覧を取得
-export async function getCaptureSources(): Promise<CaptureSource[]> {
-  // macOSの場合、画面収録権限をチェック
-  if (process.platform === 'darwin') {
-    const status = systemPreferences.getMediaAccessStatus('screen')
+// 画面収録権限の状態を取得
+export function getScreenRecordingPermissionStatus(): ScreenRecordingPermission {
+  if (process.platform !== 'darwin') {
+    // macOS以外は常に許可とみなす
+    return 'granted'
+  }
 
-    if (status !== 'granted') {
-      // 権限がない場合は空配列を返す（UIで権限リクエストを促す）
-      return []
+  const status = systemPreferences.getMediaAccessStatus('screen')
+
+  switch (status) {
+    case 'granted':
+      return 'granted'
+    case 'denied':
+      return 'denied'
+    case 'not-determined':
+      return 'not-determined'
+    case 'restricted':
+      return 'restricted'
+    default:
+      return 'unknown'
+  }
+}
+
+// システム設定の画面収録設定を開く
+export async function openScreenRecordingSettings(): Promise<void> {
+  if (process.platform === 'darwin') {
+    // macOSのシステム設定（プライバシーとセキュリティ > 画面収録）を開く
+    await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
+  }
+}
+
+// キャプチャソース一覧を取得（権限状態を含む）
+export async function getCaptureSources(): Promise<CaptureSourcesResult> {
+  const permission = getScreenRecordingPermissionStatus()
+
+  // macOSで権限がない場合は空配列を返す
+  if (process.platform === 'darwin' && permission !== 'granted') {
+    return {
+      sources: [],
+      permission
     }
   }
 
@@ -27,7 +58,7 @@ export async function getCaptureSources(): Promise<CaptureSource[]> {
     fetchWindowIcons: true
   })
 
-  return sources.map((source) => {
+  const captureSourceList: CaptureSource[] = sources.map((source) => {
     // サムネイルが空の場合は空文字を返す（UI側でプレースホルダー表示）
     let thumbnail = ''
     if (!source.thumbnail.isEmpty()) {
@@ -42,6 +73,11 @@ export async function getCaptureSources(): Promise<CaptureSource[]> {
       type: source.id.startsWith('screen:') ? 'screen' : 'window'
     }
   })
+
+  return {
+    sources: captureSourceList,
+    permission
+  }
 }
 
 // キャプチャ開始（状態管理のみ、実際のキャプチャはレンダラーで行う）

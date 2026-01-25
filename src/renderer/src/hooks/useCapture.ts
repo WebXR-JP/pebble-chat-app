@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CaptureSource, CaptureInfo } from '../../../shared/types'
+import { CaptureSource, CaptureInfo, ScreenRecordingPermission } from '../../../shared/types'
 import { WHIPClient } from '../lib/whip'
 
 interface UseCaptureResult {
@@ -9,9 +9,11 @@ interface UseCaptureResult {
   isLoading: boolean
   error: string | null
   connectionState: RTCPeerConnectionState | null
+  permission: ScreenRecordingPermission
   refreshSources: () => Promise<void>
   startCapture: (sourceId: string) => Promise<void>
   stopCapture: () => Promise<void>
+  openSettings: () => Promise<void>
 }
 
 export function useCapture(): UseCaptureResult {
@@ -25,6 +27,7 @@ export function useCapture(): UseCaptureResult {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState | null>(null)
+  const [permission, setPermission] = useState<ScreenRecordingPermission>('unknown')
 
   const whipClientRef = useRef<WHIPClient | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
@@ -47,12 +50,22 @@ export function useCapture(): UseCaptureResult {
     try {
       setIsLoading(true)
       setError(null)
-      const sources = await window.electronAPI.getCaptureSources()
-      setSources(sources)
+      const result = await window.electronAPI.getCaptureSources()
+      setSources(result.sources)
+      setPermission(result.permission)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ソース取得に失敗しました')
     } finally {
       setIsLoading(false)
+    }
+  }, [])
+
+  // システム設定を開く
+  const openSettings = useCallback(async () => {
+    try {
+      await window.electronAPI.openScreenRecordingSettings()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '設定を開けませんでした')
     }
   }, [])
 
@@ -151,8 +164,10 @@ export function useCapture(): UseCaptureResult {
     isLoading,
     error,
     connectionState,
+    permission,
     refreshSources,
     startCapture,
-    stopCapture
+    stopCapture,
+    openSettings
   }
 }

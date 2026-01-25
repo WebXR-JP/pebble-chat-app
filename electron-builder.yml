@@ -1,0 +1,30 @@
+appId: com.pebblechat.app
+productName: PebbleChat
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**/*
+  - resources/**/*
+extraMetadata:
+  main: out/main/index.js
+mac:
+  category: public.app-category.video
+  icon: resources/icon.png
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+win:
+  icon: resources/icon.png
+  target:
+    - target: nsis
+      arch:
+        - x64
+linux:
+  icon: resources/icon.png
+  target:
+    - target: AppImage
+      arch:
+        - x64

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC_CHANNELS, ElectronAPI, SetupProgress, StreamInfo, CaptureInfo, CaptureSource } from '../shared/types'
+import { IPC_CHANNELS, ElectronAPI, SetupProgress, StreamInfo, CaptureInfo, CaptureSourcesResult } from '../shared/types'
 
 const electronAPI: ElectronAPI = {
   // セットアップ
@@ -32,7 +32,7 @@ const electronAPI: ElectronAPI = {
   getStreamStatus: () => ipcRenderer.invoke(IPC_CHANNELS.STREAM_STATUS),
 
   // キャプチャ
-  getCaptureSources: (): Promise<CaptureSource[]> =>
+  getCaptureSources: (): Promise<CaptureSourcesResult> =>
     ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_GET_SOURCES),
 
   startCapture: (sourceId: string) => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_START, sourceId),
@@ -47,7 +47,9 @@ const electronAPI: ElectronAPI = {
     }
   },
 
-  getCaptureStatus: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_STATUS)
+  getCaptureStatus: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_STATUS),
+
+  openScreenRecordingSettings: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_OPEN_SETTINGS)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

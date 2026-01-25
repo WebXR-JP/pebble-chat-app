@@ -71,8 +71,8 @@ function App() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>XRift Stream</h1>
-        <p style={styles.subtitle}>VRChat / XRift 向け配信アプリ</p>
+        <h1 style={styles.title}>PebbleChat</h1>
+        <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ</p>
       </header>
 
       <main style={styles.main}>
@@ -195,14 +195,16 @@ function App() {
         <SourceSelectModal
           sources={capture.sources}
           isLoading={capture.isLoading}
+          permission={capture.permission}
           onRefresh={capture.refreshSources}
           onSelect={handleSourceSelect}
           onCancel={handleCancelSelect}
+          onOpenSettings={capture.openSettings}
         />
       )}
 
       <footer style={styles.footer}>
-        <p>Powered by XRift</p>
+        <p>PebbleChat</p>
       </footer>
     </div>
   )
