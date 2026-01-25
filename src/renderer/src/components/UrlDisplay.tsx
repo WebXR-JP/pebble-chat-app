@@ -1,5 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { StreamInfo } from '../../../shared/types'
+
+// スケルトンアニメーション用のスタイルを動的に追加
+const SKELETON_STYLE_ID = 'skeleton-animation-style'
+function injectSkeletonStyle() {
+  if (document.getElementById(SKELETON_STYLE_ID)) return
+  const style = document.createElement('style')
+  style.id = SKELETON_STYLE_ID
+  style.textContent = `
+    @keyframes skeleton-shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+    .skeleton-shimmer {
+      background: linear-gradient(
+        90deg,
+        #E0DDD8 0%,
+        #F7F6F3 50%,
+        #E0DDD8 100%
+      );
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    }
+  `
+  document.head.appendChild(style)
+}
 
 interface Props {
   streamInfo: StreamInfo
@@ -8,9 +33,24 @@ interface Props {
 
 export function UrlDisplay({ streamInfo, mode }: Props) {
   const [copied, setCopied] = useState<string | null>(null)
+  const isLoading = streamInfo.status !== 'running' || !streamInfo.publicUrl
 
-  if (streamInfo.status !== 'running') {
-    return null
+  // スケルトンアニメーション用スタイルを注入
+  useEffect(() => {
+    injectSkeletonStyle()
+  }, [])
+
+  // スケルトン表示
+  if (isLoading) {
+    return (
+      <div style={styles.container}>
+        <h3 style={styles.title}>配信URL</h3>
+        <div style={styles.section}>
+          <div style={styles.skeletonLabel} className="skeleton-shimmer" />
+          <div style={styles.skeletonUrl} className="skeleton-shimmer" />
+        </div>
+      </div>
+    )
   }
 
   const copyToClipboard = async (text: string, key: string) => {
@@ -144,5 +184,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     whiteSpace: 'nowrap',
     boxShadow: '0 2px 8px rgba(139, 115, 85, 0.25)',
     transition: 'all 0.2s ease'
+  },
+  skeletonLabel: {
+    width: '100px',
+    height: '12px',
+    borderRadius: '4px',
+    marginBottom: '8px'
+  },
+  skeletonUrl: {
+    width: '100%',
+    height: '40px',
+    borderRadius: '8px'
   }
 }

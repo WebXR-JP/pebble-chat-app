@@ -169,7 +169,12 @@ function App() {
                       {selectedSource.type === 'screen' ? '🖥️' : '🪟'}
                     </div>
                   )}
-                  <span style={styles.previewName}>{selectedSource.name}</span>
+                  <div style={styles.previewInfo}>
+                    <span style={styles.previewName}>{selectedSource.name}</span>
+                    <span style={styles.previewType}>
+                      {selectedSource.type === 'screen' ? '画面' : 'ウィンドウ'}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -390,12 +395,22 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '20px',
     border: `1px solid ${colors.border}`
   },
-  previewName: {
+  previewInfo: {
     flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    minWidth: 0
+  },
+  previewName: {
     fontSize: '13px',
     color: colors.textPrimary,
     fontWeight: 500,
     wordBreak: 'break-word'
+  },
+  previewType: {
+    fontSize: '11px',
+    color: colors.textMuted
   },
   stopButton: {
     padding: '16px 32px',
