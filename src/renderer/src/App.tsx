@@ -261,7 +261,10 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   header: {
     textAlign: 'center',
-    marginBottom: '32px'
+    marginBottom: '32px',
+    paddingTop: '16px',
+    // @ts-expect-error: WebKit specific property for draggable region
+    WebkitAppRegion: 'drag'
   },
   title: {
     margin: 0,
