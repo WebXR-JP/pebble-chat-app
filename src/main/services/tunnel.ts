@@ -49,16 +49,45 @@ export async function startTunnel(localPort: number = 8888): Promise<TunnelStatu
   }
 
   return new Promise((resolve) => {
+    let resolved = false
+
+    const doResolve = (status: TunnelStatus) => {
+      if (!resolved) {
+        resolved = true
+        resolve(status)
+      }
+    }
+
+    // タイムアウト（30秒）
+    const timeout = setTimeout(() => {
+      console.error('[Tunnel] Timeout waiting for URL')
+      if (tunnelInstance) {
+        try {
+          tunnelInstance.stop()
+        } catch {
+          // ignore
+        }
+      }
+      tunnelInstance = null
+      publicUrl = null
+      doResolve({
+        running: false,
+        url: null,
+        error: 'Tunnel起動がタイムアウトしました'
+      })
+    }, 30000)
+
     try {
       // Quick Tunnelを作成
       tunnelInstance = Tunnel.quick(`http://localhost:${localPort}`)
 
       // URLを取得
       tunnelInstance.on('url', (url) => {
+        clearTimeout(timeout)
         publicUrl = url
         console.log('[Tunnel] Started with URL:', publicUrl)
 
-        resolve({
+        doResolve({
           running: true,
           url: publicUrl,
           error: null
@@ -67,11 +96,12 @@ export async function startTunnel(localPort: number = 8888): Promise<TunnelStatu
 
       // エラー処理
       tunnelInstance.on('error', (error) => {
+        clearTimeout(timeout)
         console.error('[Tunnel] Error:', error)
         tunnelInstance = null
         publicUrl = null
 
-        resolve({
+        doResolve({
           running: false,
           url: null,
           error: error.message
@@ -80,18 +110,27 @@ export async function startTunnel(localPort: number = 8888): Promise<TunnelStatu
 
       // プロセス終了を監視
       tunnelInstance.on('exit', (code, signal) => {
+        clearTimeout(timeout)
         console.log(`[Tunnel] Process exited with code ${code}, signal ${signal}`)
         tunnelInstance = null
         publicUrl = null
+
+        // URLが取得される前に終了した場合
+        doResolve({
+          running: false,
+          url: null,
+          error: `Tunnelプロセスが終了しました (code: ${code})`
+        })
       })
     } catch (error) {
+      clearTimeout(timeout)
       tunnelInstance = null
       publicUrl = null
 
       const errorMessage = error instanceof Error ? error.message : String(error)
       console.error('[Tunnel] Failed to start:', errorMessage)
 
-      resolve({
+      doResolve({
         running: false,
         url: null,
         error: errorMessage

@@ -95,6 +95,13 @@ function App() {
         {/* 待機画面 */}
         {setup.isReady && appState === 'idle' && (
           <div style={styles.idleScreen}>
+            {/* 注意書き */}
+            <div style={styles.notice}>
+              <span style={styles.noticeText}>
+                無料サービスのため、配信の開始/停止を短時間に繰り返すと一時的に制限がかかる場合があります
+              </span>
+            </div>
+
             {/* 配信モード選択 */}
             <div style={styles.modeSelector}>
               <label style={styles.modeOption}>
@@ -292,6 +299,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: 'column',
     gap: '20px',
     flex: 1
+  },
+  notice: {
+    padding: '10px 14px',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: '10px',
+    border: `1px solid ${colors.border}`
+  },
+  noticeText: {
+    fontSize: '11px',
+    color: colors.textMuted,
+    lineHeight: 1.5
   },
   modeSelector: {
     display: 'flex',

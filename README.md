@@ -1,5 +1,7 @@
 # PebbleChat
 
+![PebbleChat](OGP.png)
+
 VRChat 向けの簡単配信アプリ。OBSもDockerも不要、アプリ一つで配信できます。
 
 ## 特徴
