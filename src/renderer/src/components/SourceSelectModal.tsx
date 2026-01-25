@@ -108,9 +108,6 @@ export function SourceSelectModal({
                 )}
                 <div style={styles.sourceInfo}>
                   <span style={styles.sourceName}>{source.name}</span>
-                  <span style={styles.sourceType}>
-                    {source.type === 'screen' ? '画面' : 'ウィンドウ'}
-                  </span>
                 </div>
               </div>
             ))
@@ -232,7 +229,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   sourceList: {
     flex: 1,
     overflowY: 'auto',
-    padding: '14px'
+    padding: '14px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '10px',
+    alignContent: 'start'
   },
   loadingText: {
     textAlign: 'center',
@@ -298,26 +299,27 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   sourceItem: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-    padding: '12px 14px',
+    flexDirection: 'column',
+    gap: '8px',
+    padding: '10px',
     borderRadius: '12px',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    marginBottom: '6px',
     border: `1px solid transparent`,
-    backgroundColor: colors.bgPrimary
+    backgroundColor: colors.bgPrimary,
+    minWidth: 0
   },
   thumbnail: {
-    width: '88px',
-    height: '50px',
+    width: '100%',
+    aspectRatio: '16 / 9',
     objectFit: 'cover',
     borderRadius: '8px',
-    border: `1px solid ${colors.border}`
+    border: `1px solid ${colors.border}`,
+    display: 'block'
   },
   thumbnailPlaceholder: {
-    width: '88px',
-    height: '50px',
+    width: '100%',
+    aspectRatio: '16 / 9',
     backgroundColor: colors.bgSecondary,
     borderRadius: '8px',
     display: 'flex',
@@ -334,7 +336,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     minWidth: 0
   },
   sourceName: {
-    fontSize: '13px',
+    fontSize: '11px',
     fontWeight: 500,
     color: colors.textPrimary,
     whiteSpace: 'nowrap',
