@@ -59,67 +59,90 @@ export function UrlDisplay({ streamInfo, mode }: Props) {
         </div>
       )}
 
-      {/* ローカルHLS (デバッグ用) */}
-      <div style={styles.section}>
-        <label style={styles.label}>ローカルHLS (確認用):</label>
-        <div style={styles.urlRow}>
-          <code style={styles.urlSmall}>{streamInfo.hlsUrl}</code>
-        </div>
-      </div>
     </div>
   )
 }
 
+// Pebble（石ころ）カラーパレット
+const colors = {
+  bgPrimary: '#F7F6F3',
+  bgSecondary: '#EDEAE5',
+  accent: '#8B7355',
+  accentLight: '#A89076',
+  success: '#5D8A66',
+  successBg: '#E8F0EA',
+  textPrimary: '#3D3D3D',
+  textSecondary: '#6B6B6B',
+  textMuted: '#9B9B9B',
+  white: '#FFFFFF',
+  border: '#E0DDD8',
+}
+
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
-    padding: '16px',
-    backgroundColor: '#e8f5e9',
-    borderRadius: '8px',
-    marginBottom: '20px'
+    padding: '18px',
+    backgroundColor: colors.white,
+    borderRadius: '14px',
+    marginBottom: '16px',
+    border: `1px solid ${colors.border}`,
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
   },
   title: {
-    margin: '0 0 12px 0',
-    fontSize: '16px'
+    margin: '0 0 14px 0',
+    fontSize: '15px',
+    fontWeight: 600,
+    color: colors.textPrimary
   },
   section: {
-    marginBottom: '12px'
+    marginBottom: '14px'
   },
   label: {
-    fontSize: '12px',
-    color: '#666',
+    fontSize: '11px',
+    fontWeight: 500,
+    color: colors.textSecondary,
     display: 'block',
-    marginBottom: '4px'
+    marginBottom: '6px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px'
   },
   urlRow: {
     display: 'flex',
-    gap: '8px',
+    gap: '10px',
     alignItems: 'center'
   },
   url: {
     flex: 1,
-    padding: '8px',
-    backgroundColor: 'white',
-    borderRadius: '4px',
+    padding: '10px 12px',
+    backgroundColor: colors.bgPrimary,
+    borderRadius: '8px',
     fontSize: '12px',
-    wordBreak: 'break-all'
+    wordBreak: 'break-all',
+    fontFamily: 'SF Mono, Monaco, Consolas, monospace',
+    color: colors.textPrimary,
+    border: `1px solid ${colors.border}`
   },
   urlSmall: {
     flex: 1,
-    padding: '4px 8px',
-    backgroundColor: 'white',
-    borderRadius: '4px',
+    padding: '8px 10px',
+    backgroundColor: colors.bgPrimary,
+    borderRadius: '8px',
     fontSize: '11px',
-    color: '#666',
-    wordBreak: 'break-all'
+    color: colors.textMuted,
+    wordBreak: 'break-all',
+    fontFamily: 'SF Mono, Monaco, Consolas, monospace',
+    border: `1px solid ${colors.border}`
   },
   copyButton: {
-    padding: '8px 12px',
+    padding: '10px 16px',
     fontSize: '12px',
-    backgroundColor: '#4caf50',
-    color: 'white',
+    fontWeight: 600,
+    background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentLight} 100%)`,
+    color: colors.white,
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '8px',
     cursor: 'pointer',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap',
+    boxShadow: '0 2px 8px rgba(139, 115, 85, 0.25)',
+    transition: 'all 0.2s ease'
   }
 }

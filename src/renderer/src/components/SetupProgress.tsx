@@ -24,13 +24,13 @@ export function SetupProgress({ progress, isLoading, error, onInstall }: Props) 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ready':
-        return '#4caf50'
+        return '#5D8A66'
       case 'downloading':
-        return '#2196f3'
+        return '#8B7355'
       case 'error':
-        return '#f44336'
+        return '#C45C4A'
       default:
-        return '#9e9e9e'
+        return '#9CA3AF'
     }
   }
 
@@ -67,52 +67,83 @@ export function SetupProgress({ progress, isLoading, error, onInstall }: Props) 
   )
 }
 
+// Pebble（石ころ）カラーパレット
+const colors = {
+  bgPrimary: '#F7F6F3',
+  bgSecondary: '#EDEAE5',
+  accent: '#8B7355',
+  accentLight: '#A89076',
+  error: '#C45C4A',
+  errorBg: '#FAE8E5',
+  textPrimary: '#3D3D3D',
+  textSecondary: '#6B6B6B',
+  white: '#FFFFFF',
+  border: '#E0DDD8',
+}
+
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
-    padding: '20px',
-    backgroundColor: '#f5f5f5',
-    borderRadius: '8px',
-    marginBottom: '20px'
+    padding: '22px',
+    backgroundColor: colors.white,
+    borderRadius: '16px',
+    marginBottom: '20px',
+    border: `1px solid ${colors.border}`,
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
   },
   title: {
-    margin: '0 0 16px 0',
-    fontSize: '18px'
+    margin: '0 0 18px 0',
+    fontSize: '17px',
+    fontWeight: 600,
+    color: colors.textPrimary
   },
   items: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px'
+    gap: '10px'
   },
   item: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '10px',
+    padding: '10px 14px',
+    backgroundColor: colors.bgPrimary,
+    borderRadius: '10px'
   },
   icon: {
     fontSize: '16px',
     fontWeight: 'bold'
   },
   label: {
-    fontSize: '14px'
+    fontSize: '14px',
+    fontWeight: 500,
+    color: colors.textPrimary
   },
   message: {
-    fontSize: '12px',
-    color: '#666',
-    marginTop: '12px'
+    fontSize: '13px',
+    color: colors.textSecondary,
+    marginTop: '16px',
+    padding: '10px 14px',
+    backgroundColor: colors.bgPrimary,
+    borderRadius: '8px'
   },
   error: {
-    fontSize: '12px',
-    color: '#f44336',
-    marginTop: '8px'
+    fontSize: '13px',
+    color: colors.error,
+    marginTop: '10px',
+    padding: '10px 14px',
+    backgroundColor: colors.errorBg,
+    borderRadius: '8px'
   },
   button: {
     marginTop: '16px',
-    padding: '10px 20px',
+    padding: '12px 24px',
     fontSize: '14px',
-    backgroundColor: '#2196f3',
-    color: 'white',
+    fontWeight: 600,
+    background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentLight} 100%)`,
+    color: colors.white,
     border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer'
+    borderRadius: '10px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(139, 115, 85, 0.3)'
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { SetupProgress } from './components/SetupProgress'
 import { UrlDisplay } from './components/UrlDisplay'
 import { SourceSelectModal } from './components/SourceSelectModal'
@@ -68,8 +68,23 @@ function App() {
   const isStreaming = capture.isCapturing || streaming.isStreaming
   const isLoading = capture.isLoading || streaming.isLoading
 
+  // コンテンツに応じてウィンドウサイズを調整
+  const containerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const resizeWindow = () => {
+      if (containerRef.current) {
+        const height = containerRef.current.scrollHeight + 48 // padding分を追加
+        const clampedHeight = Math.max(400, Math.min(height, 800)) // 400〜800の範囲
+        window.electronAPI.resizeWindow(clampedHeight)
+      }
+    }
+    // 少し遅延させてDOMが更新されてから計測
+    const timer = setTimeout(resizeWindow, 100)
+    return () => clearTimeout(timer)
+  }, [appState, setup.isReady, streaming.streamInfo.publicUrl])
+
   return (
-    <div style={styles.container}>
+    <div ref={containerRef} style={styles.container}>
       <header style={styles.header}>
         <h1 style={styles.title}>PebbleChat</h1>
         <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ</p>
@@ -203,21 +218,46 @@ function App() {
         />
       )}
 
-      <footer style={styles.footer}>
-        <p>PebbleChat</p>
-      </footer>
     </div>
   )
+}
+
+// Pebble（石ころ）カラーパレット
+const colors = {
+  // 背景
+  bgPrimary: '#F7F6F3',      // 温かみのあるオフホワイト
+  bgSecondary: '#EDEAE5',    // サンドベージュ
+  // 石っぽいグレー
+  stone: '#6B7280',
+  stoneDark: '#4B5563',
+  stoneLight: '#9CA3AF',
+  // アクセント（温かみのある茶系）
+  accent: '#8B7355',
+  accentLight: '#A89076',
+  // 状態色
+  success: '#5D8A66',
+  successBg: '#E8F0EA',
+  error: '#C45C4A',
+  errorBg: '#FAE8E5',
+  warning: '#C4956A',
+  // テキスト
+  textPrimary: '#3D3D3D',
+  textSecondary: '#6B6B6B',
+  textMuted: '#9B9B9B',
+  // その他
+  white: '#FFFFFF',
+  border: '#E0DDD8',
 }
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    minHeight: '100vh',
-    padding: '20px',
+    padding: '24px',
     boxSizing: 'border-box',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    background: `linear-gradient(180deg, ${colors.bgPrimary} 0%, ${colors.bgSecondary} 100%)`,
+    minHeight: '100vh'
   },
   header: {
     textAlign: 'center',
@@ -225,13 +265,16 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   title: {
     margin: 0,
-    fontSize: '24px',
-    color: '#333'
+    fontSize: '26px',
+    fontWeight: 700,
+    color: colors.stoneDark,
+    letterSpacing: '-0.5px'
   },
   subtitle: {
-    margin: '4px 0 0 0',
-    fontSize: '14px',
-    color: '#666'
+    margin: '6px 0 0 0',
+    fontSize: '13px',
+    color: colors.textSecondary,
+    fontWeight: 500
   },
   main: {
     flex: 1,
@@ -240,62 +283,65 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   // 待機画面
   idleScreen: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    gap: '24px'
-  },
-  modeSelector: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
-  },
-  modeOption: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '12px',
-    padding: '16px',
-    backgroundColor: '#f8f8f8',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    transition: 'background-color 0.15s'
-  },
-  modeContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px'
-  },
-  modeName: {
-    fontSize: '15px',
-    fontWeight: 'bold',
-    color: '#333'
-  },
-  modeDesc: {
-    fontSize: '12px',
-    color: '#666'
-  },
-  startButton: {
-    padding: '16px 32px',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: 'white',
-    backgroundColor: '#4caf50',
-    border: 'none',
-    borderRadius: '10px',
-    cursor: 'pointer'
-  },
-  // 配信中画面
-  streamingScreen: {
-    flex: 1,
     display: 'flex',
     flexDirection: 'column',
     gap: '20px'
   },
+  modeSelector: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px'
+  },
+  modeOption: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    padding: '16px 18px',
+    backgroundColor: colors.white,
+    borderRadius: '14px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    border: `1px solid ${colors.border}`,
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+  },
+  modeContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '3px'
+  },
+  modeName: {
+    fontSize: '15px',
+    fontWeight: 600,
+    color: colors.textPrimary
+  },
+  modeDesc: {
+    fontSize: '12px',
+    color: colors.textSecondary
+  },
+  startButton: {
+    padding: '16px 32px',
+    fontSize: '16px',
+    fontWeight: 600,
+    color: colors.white,
+    background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentLight} 100%)`,
+    border: 'none',
+    borderRadius: '14px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 14px rgba(139, 115, 85, 0.35)',
+    transition: 'all 0.2s ease',
+    marginTop: '8px'
+  },
+  // 配信中画面
+  streamingScreen: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
+  },
   statusCard: {
     padding: '20px',
-    backgroundColor: '#e8f5e9',
-    borderRadius: '10px'
+    backgroundColor: colors.successBg,
+    borderRadius: '14px',
+    border: `1px solid rgba(93, 138, 102, 0.2)`
   },
   statusHeader: {
     display: 'flex',
@@ -303,79 +349,91 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: '10px'
   },
   statusDot: {
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%'
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    boxShadow: '0 0 8px rgba(93, 138, 102, 0.5)'
   },
   statusText: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: '#333'
+    fontSize: '15px',
+    fontWeight: 600,
+    color: colors.success
   },
   sourcePreview: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    marginTop: '16px',
+    marginTop: '14px',
     padding: '12px',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: '8px'
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: '10px',
+    border: `1px solid ${colors.border}`
   },
   previewThumbnail: {
-    width: '120px',
-    height: '68px',
+    width: '100px',
+    height: '56px',
     objectFit: 'cover',
-    borderRadius: '6px'
+    borderRadius: '6px',
+    border: `1px solid ${colors.border}`
   },
   previewPlaceholder: {
-    width: '120px',
-    height: '68px',
-    backgroundColor: '#e0e0e0',
+    width: '100px',
+    height: '56px',
+    backgroundColor: colors.bgSecondary,
     borderRadius: '6px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '24px'
+    fontSize: '20px',
+    border: `1px solid ${colors.border}`
   },
   previewName: {
     flex: 1,
     fontSize: '13px',
-    color: '#333',
+    color: colors.textPrimary,
+    fontWeight: 500,
     wordBreak: 'break-word'
   },
   stopButton: {
     padding: '16px 32px',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: 'white',
-    backgroundColor: '#f44336',
+    fontSize: '16px',
+    fontWeight: 600,
+    color: colors.white,
+    background: `linear-gradient(135deg, ${colors.error} 0%, #D4776A 100%)`,
     border: 'none',
-    borderRadius: '10px',
+    borderRadius: '14px',
     cursor: 'pointer',
+    boxShadow: '0 4px 14px rgba(196, 92, 74, 0.35)',
+    transition: 'all 0.2s ease',
     marginTop: 'auto'
   },
   connectingButton: {
     padding: '16px 32px',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: 'white',
-    backgroundColor: '#9e9e9e',
+    fontSize: '16px',
+    fontWeight: 600,
+    color: colors.white,
+    background: `linear-gradient(135deg, ${colors.stoneLight} 0%, ${colors.stone} 100%)`,
     border: 'none',
-    borderRadius: '10px',
+    borderRadius: '14px',
     cursor: 'not-allowed',
-    marginTop: 'auto'
+    marginTop: 'auto',
+    opacity: 0.7
   },
   error: {
-    color: '#f44336',
-    fontSize: '14px',
+    color: colors.error,
+    fontSize: '13px',
     textAlign: 'center',
-    marginTop: '16px'
+    marginTop: '12px',
+    padding: '12px',
+    backgroundColor: colors.errorBg,
+    borderRadius: '10px'
   },
   footer: {
     textAlign: 'center',
     marginTop: '24px',
-    fontSize: '12px',
-    color: '#999'
+    fontSize: '11px',
+    color: colors.textMuted,
+    fontWeight: 500
   }
 }
 

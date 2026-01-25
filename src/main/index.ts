@@ -1,16 +1,17 @@
-import { app, shell, BrowserWindow, session } from 'electron'
+import { app, shell, BrowserWindow, session, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerAllHandlers, cleanupStreaming } from './ipc'
+import { IPC_CHANNELS } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 480,
-    height: 600,
+    height: 500,
     minWidth: 400,
-    minHeight: 500,
+    minHeight: 400,
     show: false,
     autoHideMenuBar: true,
     icon: join(__dirname, '../../resources/icon.png'),
@@ -70,6 +71,14 @@ app.whenReady().then(() => {
 
   // IPCハンドラ登録
   registerAllHandlers(() => mainWindow)
+
+  // ウィンドウリサイズハンドラ
+  ipcMain.handle(IPC_CHANNELS.WINDOW_RESIZE, async (_event, height: number) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const [width] = mainWindow.getSize()
+      mainWindow.setSize(width, height, true)
+    }
+  })
 
   // ウィンドウ作成
   createWindow()

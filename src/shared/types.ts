@@ -79,7 +79,10 @@ export const IPC_CHANNELS = {
 
   // 設定
   CONFIG_GET: 'config:get',
-  CONFIG_SET: 'config:set'
+  CONFIG_SET: 'config:set',
+
+  // ウィンドウ
+  WINDOW_RESIZE: 'window:resize'
 } as const
 
 // IPC API 型定義
@@ -102,4 +105,7 @@ export interface ElectronAPI {
   onCaptureStatus: (callback: (info: CaptureInfo) => void) => () => void
   getCaptureStatus: () => Promise<CaptureInfo>
   openScreenRecordingSettings: () => Promise<void>
+
+  // ウィンドウ
+  resizeWindow: (height: number) => Promise<void>
 }

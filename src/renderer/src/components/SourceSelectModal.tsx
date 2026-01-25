@@ -97,6 +97,24 @@ export function SourceSelectModal({
   )
 }
 
+// Pebble（石ころ）カラーパレット
+const colors = {
+  bgPrimary: '#F7F6F3',
+  bgSecondary: '#EDEAE5',
+  stone: '#6B7280',
+  stoneDark: '#4B5563',
+  stoneLight: '#9CA3AF',
+  accent: '#8B7355',
+  accentLight: '#A89076',
+  warning: '#C4956A',
+  warningBg: '#FDF6F0',
+  textPrimary: '#3D3D3D',
+  textSecondary: '#6B6B6B',
+  textMuted: '#9B9B9B',
+  white: '#FFFFFF',
+  border: '#E0DDD8',
+}
+
 const styles: { [key: string]: React.CSSProperties } = {
   overlay: {
     position: 'fixed',
@@ -104,56 +122,66 @@ const styles: { [key: string]: React.CSSProperties } = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(61, 61, 61, 0.4)',
+    backdropFilter: 'blur(4px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000
   },
   modal: {
-    backgroundColor: 'white',
-    borderRadius: '12px',
+    backgroundColor: colors.white,
+    borderRadius: '18px',
     width: '90%',
-    maxWidth: '500px',
+    maxWidth: '480px',
     maxHeight: '80vh',
     display: 'flex',
     flexDirection: 'column',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1)',
+    border: `1px solid ${colors.border}`
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '16px 20px',
-    borderBottom: '1px solid #eee'
+    padding: '18px 22px',
+    borderBottom: `1px solid ${colors.border}`,
+    backgroundColor: colors.bgPrimary,
+    borderRadius: '18px 18px 0 0'
   },
   title: {
     margin: 0,
     fontSize: '16px',
-    color: '#333'
+    fontWeight: 600,
+    color: colors.stoneDark
   },
   refreshButton: {
-    padding: '6px 12px',
+    padding: '7px 14px',
     fontSize: '12px',
-    backgroundColor: '#fff',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    cursor: 'pointer'
+    fontWeight: 500,
+    backgroundColor: colors.white,
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    cursor: 'pointer',
+    color: colors.textSecondary,
+    transition: 'all 0.2s ease'
   },
   sourceList: {
     flex: 1,
     overflowY: 'auto',
-    padding: '12px'
+    padding: '14px'
   },
   loadingText: {
     textAlign: 'center',
-    color: '#666',
-    padding: '40px 0'
+    color: colors.textSecondary,
+    padding: '40px 0',
+    fontSize: '14px'
   },
   emptyText: {
     textAlign: 'center',
-    color: '#666',
-    padding: '40px 0'
+    color: colors.textSecondary,
+    padding: '40px 0',
+    fontSize: '14px'
   },
   permissionContainer: {
     display: 'flex',
@@ -163,101 +191,115 @@ const styles: { [key: string]: React.CSSProperties } = {
     textAlign: 'center'
   },
   permissionIcon: {
-    width: '48px',
-    height: '48px',
+    width: '52px',
+    height: '52px',
     borderRadius: '50%',
-    backgroundColor: '#FEF3C7',
-    color: '#D97706',
+    backgroundColor: colors.warningBg,
+    color: colors.warning,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '24px',
     fontWeight: 'bold',
-    marginBottom: '16px'
+    marginBottom: '18px',
+    border: `2px solid ${colors.warning}`
   },
   permissionTitle: {
-    margin: '0 0 8px 0',
-    fontSize: '15px',
+    margin: '0 0 10px 0',
+    fontSize: '16px',
     fontWeight: 600,
-    color: '#333'
+    color: colors.textPrimary
   },
   permissionText: {
-    margin: '0 0 20px 0',
+    margin: '0 0 22px 0',
     fontSize: '13px',
-    color: '#666',
-    lineHeight: 1.5
+    color: colors.textSecondary,
+    lineHeight: 1.6
   },
   settingsButton: {
-    padding: '10px 20px',
-    fontSize: '13px',
-    fontWeight: 500,
-    backgroundColor: '#3B82F6',
-    color: 'white',
+    padding: '12px 24px',
+    fontSize: '14px',
+    fontWeight: 600,
+    background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentLight} 100%)`,
+    color: colors.white,
     border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer'
+    borderRadius: '10px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(139, 115, 85, 0.3)',
+    transition: 'all 0.2s ease'
   },
   permissionNote: {
-    marginTop: '16px',
+    marginTop: '18px',
     fontSize: '12px',
-    color: '#999'
+    color: colors.textMuted
   },
   sourceItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    padding: '10px 12px',
-    borderRadius: '8px',
+    gap: '14px',
+    padding: '12px 14px',
+    borderRadius: '12px',
     cursor: 'pointer',
-    transition: 'background-color 0.15s'
+    transition: 'all 0.2s ease',
+    marginBottom: '6px',
+    border: `1px solid transparent`,
+    backgroundColor: colors.bgPrimary
   },
   thumbnail: {
-    width: '80px',
-    height: '45px',
+    width: '88px',
+    height: '50px',
     objectFit: 'cover',
-    borderRadius: '4px',
-    backgroundColor: '#f0f0f0'
+    borderRadius: '8px',
+    border: `1px solid ${colors.border}`
   },
   thumbnailPlaceholder: {
-    width: '80px',
-    height: '45px',
-    backgroundColor: '#e0e0e0',
-    borderRadius: '4px',
+    width: '88px',
+    height: '50px',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '20px'
+    fontSize: '20px',
+    border: `1px solid ${colors.border}`
   },
   sourceInfo: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
+    gap: '3px',
     minWidth: 0
   },
   sourceName: {
     fontSize: '13px',
-    color: '#333',
+    fontWeight: 500,
+    color: colors.textPrimary,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis'
   },
   sourceType: {
     fontSize: '11px',
-    color: '#999'
+    color: colors.textMuted,
+    fontWeight: 500
   },
   footer: {
-    padding: '12px 20px',
-    borderTop: '1px solid #eee',
+    padding: '14px 22px',
+    borderTop: `1px solid ${colors.border}`,
     display: 'flex',
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-end',
+    backgroundColor: colors.bgPrimary,
+    borderRadius: '0 0 18px 18px'
   },
   cancelButton: {
-    padding: '8px 16px',
+    padding: '10px 20px',
     fontSize: '13px',
-    backgroundColor: '#f5f5f5',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
-    cursor: 'pointer'
+    fontWeight: 500,
+    backgroundColor: colors.white,
+    border: `1px solid ${colors.border}`,
+    borderRadius: '10px',
+    cursor: 'pointer',
+    color: colors.textSecondary,
+    transition: 'all 0.2s ease'
   }
 }

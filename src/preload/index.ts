@@ -49,7 +49,10 @@ const electronAPI: ElectronAPI = {
 
   getCaptureStatus: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_STATUS),
 
-  openScreenRecordingSettings: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_OPEN_SETTINGS)
+  openScreenRecordingSettings: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_OPEN_SETTINGS),
+
+  // ウィンドウ
+  resizeWindow: (height: number) => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_RESIZE, height)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
