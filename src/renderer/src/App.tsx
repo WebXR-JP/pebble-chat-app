@@ -71,10 +71,12 @@ function App() {
 
   return (
     <div style={styles.container}>
-      <header style={styles.header}>
-        <img src={logoImage} alt="PebbleChat" style={styles.logo} />
-        <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ</p>
-      </header>
+      {appState !== 'streaming' && (
+        <header style={styles.header}>
+          <img src={logoImage} alt="PebbleChat" style={styles.logo} />
+          <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ</p>
+        </header>
+      )}
 
       <main style={styles.main}>
         {/* セットアップ中 */}
@@ -248,7 +250,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   header: {
     textAlign: 'center',
     marginBottom: '32px',
-    paddingTop: '16px',
+    paddingTop: '32px',  // タイトルバー分のスペース
     // @ts-expect-error: WebKit specific property for draggable region
     WebkitAppRegion: 'drag'
   },
@@ -270,7 +272,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   idleScreen: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px'
+    gap: '20px',
+    flex: 1
   },
   modeSelector: {
     display: 'flex',
@@ -314,13 +317,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     boxShadow: '0 4px 14px rgba(139, 115, 85, 0.35)',
     transition: 'all 0.2s ease',
-    marginTop: '8px'
+    marginTop: 'auto'
   },
   // 配信中画面
   streamingScreen: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px'
+    gap: '16px',
+    paddingTop: '32px',  // タイトルバー分のスペース
+    flex: 1
   },
   statusCard: {
     padding: '20px',
