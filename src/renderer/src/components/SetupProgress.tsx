@@ -52,6 +52,13 @@ export function SetupProgress({ progress, isLoading, error, onInstall }: Props) 
           </span>
           <span style={styles.label}>cloudflared</span>
         </div>
+
+        <div style={styles.item}>
+          <span style={{ ...styles.icon, color: getStatusColor(progress.ffmpeg) }}>
+            {getStatusIcon(progress.ffmpeg)}
+          </span>
+          <span style={styles.label}>FFmpeg</span>
+        </div>
       </div>
 
       <p style={styles.message}>{progress.message}</p>

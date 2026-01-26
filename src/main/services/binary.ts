@@ -7,8 +7,8 @@ import { createGunzip } from 'zlib'
 import { pipeline } from 'stream/promises'
 import { Extract } from 'unzipper'
 import * as tar from 'tar'
-import { getBinariesPath, getMediaMTXPath, getTempPath, getMediaMTXConfigPath, getCloudflaredPath, getFFmpegPath } from '../utils/paths'
-import { getPlatform, getMediaMTXDownloadUrl, getMediaMTXBinaryName, getCloudflaredDownloadUrl, getCloudflaredBinaryName } from '../utils/platform'
+import { getBinariesPath, getMediaMTXPath, getTempPath, getMediaMTXConfigPath, getCloudflaredPath, getFFmpegPath, getBundledFFmpegPath } from '../utils/paths'
+import { getPlatform, getMediaMTXDownloadUrl, getMediaMTXBinaryName, getCloudflaredDownloadUrl, getCloudflaredBinaryName, getFFmpegDownloadUrl, getFFmpegBinaryName } from '../utils/platform'
 
 const MEDIAMTX_VERSION = '1.9.3'
 const CLOUDFLARED_VERSION = '2024.12.2'
@@ -89,6 +89,88 @@ async function extractTgz(archivePath: string, destPath: string): Promise<void> 
   })
 }
 
+// FFmpegがインストール済みか確認（バンドル版のみチェック）
+export async function isFFmpegInstalled(): Promise<boolean> {
+  // バンドル版があるかチェック
+  const bundledPath = getBundledFFmpegPath()
+  try {
+    await fsp.access(bundledPath, fs.constants.X_OK)
+    return true
+  } catch {
+    // バンドル版がない場合、システムにFFmpegがあるかチェック
+    const systemPath = getFFmpegPath()
+    return systemPath !== null
+  }
+}
+
+// FFmpegをダウンロード・インストール
+export async function installFFmpeg(
+  onProgress?: (message: string) => void
+): Promise<void> {
+  const binPath = getBinariesPath()
+  const tempPath = getTempPath()
+  const platform = getPlatform()
+
+  // ディレクトリ作成
+  await fsp.mkdir(binPath, { recursive: true })
+  await fsp.mkdir(tempPath, { recursive: true })
+
+  const downloadUrl = getFFmpegDownloadUrl()
+
+  if (!downloadUrl) {
+    throw new Error('このプラットフォームではFFmpegの自動インストールはサポートされていません')
+  }
+
+  onProgress?.('FFmpegをダウンロード中...（100MB以上あるため時間がかかります）')
+
+  if (platform === 'win32') {
+    // Windowsはzipをダウンロードして展開
+    const archivePath = path.join(tempPath, 'ffmpeg.zip')
+    await downloadFile(downloadUrl, archivePath)
+
+    onProgress?.('FFmpegを展開中...')
+    await extractZip(archivePath, tempPath)
+
+    // 展開されたディレクトリからffmpeg.exeを探してコピー
+    const extractedDirs = await fsp.readdir(tempPath)
+    const ffmpegDir = extractedDirs.find(d => d.startsWith('ffmpeg-'))
+    if (ffmpegDir) {
+      const ffmpegExePath = path.join(tempPath, ffmpegDir, 'bin', 'ffmpeg.exe')
+      if (fs.existsSync(ffmpegExePath)) {
+        await fsp.copyFile(ffmpegExePath, getBundledFFmpegPath())
+      } else {
+        throw new Error('FFmpegバイナリが見つかりませんでした')
+      }
+      // 展開したディレクトリを削除
+      await fsp.rm(path.join(tempPath, ffmpegDir), { recursive: true, force: true })
+    } else {
+      throw new Error('FFmpeg展開ディレクトリが見つかりませんでした')
+    }
+
+    // 一時ファイル削除
+    await fsp.rm(archivePath, { force: true })
+  } else if (platform === 'darwin') {
+    // macOSはzipをダウンロード
+    const archivePath = path.join(tempPath, 'ffmpeg.zip')
+    await downloadFile(downloadUrl, archivePath)
+
+    onProgress?.('FFmpegを展開中...')
+    await extractZip(archivePath, binPath)
+
+    // Gatekeeper対応
+    onProgress?.('Gatekeeper対応中...')
+    await removeQuarantine(getBundledFFmpegPath())
+
+    // 実行権限付与
+    await fsp.chmod(getBundledFFmpegPath(), 0o755)
+
+    // 一時ファイル削除
+    await fsp.rm(archivePath, { force: true })
+  }
+
+  onProgress?.('FFmpegのインストール完了')
+}
+
 // MediaMTXをダウンロード・インストール
 export async function installMediaMTX(
   onProgress?: (message: string) => void
@@ -147,8 +229,8 @@ function downloadFile(url: string, destPath: string): Promise<void> {
     const request = (currentUrl: string): void => {
       https
         .get(currentUrl, (response) => {
-          // リダイレクト対応
-          if (response.statusCode === 302 || response.statusCode === 301) {
+          // リダイレクト対応（301, 302, 303, 307, 308）
+          if ([301, 302, 303, 307, 308].includes(response.statusCode || 0)) {
             const redirectUrl = response.headers.location
             if (redirectUrl) {
               request(redirectUrl)
@@ -211,7 +293,8 @@ async function removeQuarantine(filePath: string): Promise<void> {
 export async function updateMediaMTXConfig(): Promise<void> {
   // FFmpegのパスを検出
   const ffmpegPath = getFFmpegPath()
-  const ffmpegCommand = ffmpegPath || 'ffmpeg' // 見つからない場合はffmpegを使う（PATHにあることを期待）
+  // Windowsのバックスラッシュをスラッシュに変換（YAMLでエスケープ問題を回避）
+  const ffmpegCommand = ffmpegPath ? ffmpegPath.replace(/\\/g, '/') : 'ffmpeg'
 
   console.log('[Binary] FFmpeg path detected:', ffmpegPath || 'not found, using default')
 

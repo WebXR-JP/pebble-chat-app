@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { IPC_CHANNELS, SetupProgress, StreamInfo, CaptureInfo, CaptureSourcesResult } from '../../shared/types'
-import { isMediaMTXInstalled, installMediaMTX } from '../services/binary'
+import { isMediaMTXInstalled, installMediaMTX, isFFmpegInstalled, installFFmpeg } from '../services/binary'
 import { startMediaMTX, stopMediaMTX, getMediaMTXStatus } from '../services/mediamtx'
 import {
   isCloudflaredInstalled,
@@ -55,12 +55,14 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
   ipcMain.handle(IPC_CHANNELS.SETUP_CHECK, async (): Promise<SetupProgress> => {
     const mediamtxReady = await isMediaMTXInstalled()
     const cloudflaredReady = await isCloudflaredInstalled()
+    const ffmpegReady = await isFFmpegInstalled()
 
     return {
       mediamtx: mediamtxReady ? 'ready' : 'pending',
       cloudflared: cloudflaredReady ? 'ready' : 'pending',
+      ffmpeg: ffmpegReady ? 'ready' : 'pending',
       message:
-        mediamtxReady && cloudflaredReady ? '準備完了' : 'セットアップが必要です'
+        mediamtxReady && cloudflaredReady && ffmpegReady ? '準備完了' : 'セットアップが必要です'
     }
   })
 
@@ -75,6 +77,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         sendSetupProgress(window, {
           mediamtx: 'downloading',
           cloudflared: 'pending',
+          ffmpeg: 'pending',
           message: 'MediaMTXをダウンロード中...'
         })
 
@@ -82,6 +85,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
           sendSetupProgress(window, {
             mediamtx: 'downloading',
             cloudflared: 'pending',
+            ffmpeg: 'pending',
             message: msg
           })
         })
@@ -90,6 +94,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       sendSetupProgress(window, {
         mediamtx: 'ready',
         cloudflared: 'pending',
+        ffmpeg: 'pending',
         message: 'cloudflaredをセットアップ中...'
       })
 
@@ -99,6 +104,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         sendSetupProgress(window, {
           mediamtx: 'ready',
           cloudflared: 'downloading',
+          ffmpeg: 'pending',
           message: 'cloudflaredをダウンロード中...'
         })
 
@@ -106,6 +112,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
           sendSetupProgress(window, {
             mediamtx: 'ready',
             cloudflared: 'downloading',
+            ffmpeg: 'pending',
             message: msg
           })
         })
@@ -114,6 +121,34 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       sendSetupProgress(window, {
         mediamtx: 'ready',
         cloudflared: 'ready',
+        ffmpeg: 'pending',
+        message: 'FFmpegをセットアップ中...'
+      })
+
+      // FFmpegインストール
+      const ffmpegReady = await isFFmpegInstalled()
+      if (!ffmpegReady) {
+        sendSetupProgress(window, {
+          mediamtx: 'ready',
+          cloudflared: 'ready',
+          ffmpeg: 'downloading',
+          message: 'FFmpegをダウンロード中...（100MB以上あるため時間がかかります）'
+        })
+
+        await installFFmpeg((msg) => {
+          sendSetupProgress(window, {
+            mediamtx: 'ready',
+            cloudflared: 'ready',
+            ffmpeg: 'downloading',
+            message: msg
+          })
+        })
+      }
+
+      sendSetupProgress(window, {
+        mediamtx: 'ready',
+        cloudflared: 'ready',
+        ffmpeg: 'ready',
         message: 'セットアップ完了'
       })
     } catch (error) {
@@ -121,6 +156,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       sendSetupProgress(window, {
         mediamtx: 'error',
         cloudflared: 'error',
+        ffmpeg: 'error',
         message: `セットアップ失敗: ${errorMessage}`
       })
       throw error

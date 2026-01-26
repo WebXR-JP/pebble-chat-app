@@ -13,12 +13,13 @@ export function useSetup(): UseSetupResult {
   const [progress, setProgress] = useState<SetupProgress>({
     mediamtx: 'pending',
     cloudflared: 'pending',
+    ffmpeg: 'pending',
     message: '確認中...'
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const isReady = progress.mediamtx === 'ready' && progress.cloudflared === 'ready'
+  const isReady = progress.mediamtx === 'ready' && progress.cloudflared === 'ready' && progress.ffmpeg === 'ready'
 
   // 初回チェック＆自動インストール
   useEffect(() => {
@@ -28,7 +29,7 @@ export function useSetup(): UseSetupResult {
         setProgress(result)
 
         // 未インストールなら自動でインストール開始
-        if (result.mediamtx === 'pending' || result.cloudflared === 'pending') {
+        if (result.mediamtx === 'pending' || result.cloudflared === 'pending' || result.ffmpeg === 'pending') {
           setIsLoading(true)
           await window.electronAPI.installBinaries()
           setIsLoading(false)
@@ -45,7 +46,7 @@ export function useSetup(): UseSetupResult {
   useEffect(() => {
     const unsubscribe = window.electronAPI.onSetupProgress((newProgress) => {
       setProgress(newProgress)
-      if (newProgress.mediamtx === 'error' || newProgress.cloudflared === 'error') {
+      if (newProgress.mediamtx === 'error' || newProgress.cloudflared === 'error' || newProgress.ffmpeg === 'error') {
         setError(newProgress.message)
         setIsLoading(false)
       }

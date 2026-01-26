@@ -2,7 +2,7 @@ import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { execSync } from 'child_process'
-import { getMediaMTXBinaryName, getCloudflaredBinaryName, getPlatform } from './platform'
+import { getMediaMTXBinaryName, getCloudflaredBinaryName, getFFmpegBinaryName, getPlatform } from './platform'
 
 // ユーザーデータディレクトリ（バイナリ保存場所）
 export function getUserDataPath(): string {
@@ -29,6 +29,11 @@ export function getCloudflaredPath(): string {
   return path.join(getBinariesPath(), getCloudflaredBinaryName())
 }
 
+// バンドルされたFFmpegバイナリパス
+export function getBundledFFmpegPath(): string {
+  return path.join(getBinariesPath(), getFFmpegBinaryName())
+}
+
 // ログディレクトリ
 export function getLogsPath(): string {
   return path.join(getUserDataPath(), 'logs')
@@ -39,11 +44,17 @@ export function getTempPath(): string {
   return path.join(getUserDataPath(), 'temp')
 }
 
-// FFmpegのパスを検出
+// FFmpegのパスを検出（バンドル版を優先）
 export function getFFmpegPath(): string | null {
   const platform = getPlatform()
 
-  // まずwhichコマンドで探す（開発環境では動作するが、パッケージ後は環境変数が異なる可能性がある）
+  // まずバンドルされたFFmpegをチェック
+  const bundledPath = getBundledFFmpegPath()
+  if (fs.existsSync(bundledPath)) {
+    return bundledPath
+  }
+
+  // 次にwhichコマンドで探す（開発環境では動作するが、パッケージ後は環境変数が異なる可能性がある）
   try {
     if (platform === 'win32') {
       const result = execSync('where ffmpeg', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] })
@@ -72,7 +83,14 @@ export function getFFmpegPath(): string | null {
     : platform === 'win32'
     ? [
         'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+        'C:\\Program Files\\ffmpeg\\ffmpeg.exe',
+        'C:\\Program Files (x86)\\ffmpeg\\bin\\ffmpeg.exe',
         'C:\\ffmpeg\\bin\\ffmpeg.exe',
+        'C:\\ffmpeg\\ffmpeg.exe',
+        // winget / scoop / chocolatey
+        `${process.env.LOCALAPPDATA}\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-7.1-full_build\\bin\\ffmpeg.exe`,
+        `${process.env.USERPROFILE}\\scoop\\apps\\ffmpeg\\current\\bin\\ffmpeg.exe`,
+        'C:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe',
       ]
     : [
         '/usr/bin/ffmpeg',

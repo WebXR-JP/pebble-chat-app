@@ -78,3 +78,29 @@ export function getCloudflaredDownloadUrl(version: string): string {
 export function getCloudflaredBinaryName(): string {
   return getPlatform() === 'win32' ? 'cloudflared.exe' : 'cloudflared'
 }
+
+// FFmpegダウンロードURL生成（Windows用のみ、macOS/LinuxはシステムのFFmpegを使用）
+export function getFFmpegDownloadUrl(): string {
+  const platform = getPlatform()
+  const arch = getArchitecture()
+
+  if (platform === 'win32') {
+    // gyan.devのessentialsビルドを使用（軽量版）
+    return 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip'
+  } else if (platform === 'darwin') {
+    // macOS用はevermeet.cxからダウンロード
+    if (arch === 'arm64') {
+      return 'https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip'
+    } else {
+      return 'https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip'
+    }
+  } else {
+    // Linuxはシステムのffmpegを使用（自動ダウンロード非対応）
+    return ''
+  }
+}
+
+// FFmpegバイナリ名
+export function getFFmpegBinaryName(): string {
+  return getPlatform() === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
+}

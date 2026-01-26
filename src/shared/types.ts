@@ -36,6 +36,7 @@ export type SetupStatus = 'pending' | 'downloading' | 'ready' | 'error'
 export interface SetupProgress {
   mediamtx: SetupStatus
   cloudflared: SetupStatus
+  ffmpeg: SetupStatus
   message: string
 }
 
