@@ -2,7 +2,7 @@
 
 ![PebbleChat](OGP.png)
 
-VRChat 向けの簡単配信アプリ。OBSもDockerも不要、アプリ一つで配信できます。
+VRChat 向けの簡単配信アプリ。ボタンひとつで配信URLを発行、あとは iwaSync に貼るだけ。
 
 ## 特徴
 
