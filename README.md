@@ -11,6 +11,14 @@ VRChat 向けの簡単配信アプリ。OBSもDockerも不要、アプリ一つ�
 - **軽量**: FFmpeg不要、WebRTC経由で配信
 - **安全**: ポート開放不要
 
+## ダウンロード
+
+| OS | ダウンロード |
+|----|------------|
+| macOS (Apple Silicon) | [PebbleChat-mac-arm64.dmg](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/PebbleChat-mac-arm64.dmg) |
+| macOS (Intel) | [PebbleChat-mac-x64.dmg](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/PebbleChat-mac-x64.dmg) |
+| Windows | [PebbleChat-win-x64.exe](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/PebbleChat-win-x64.exe) |
+
 ## 背景
 
 VRChat内でのライブ配信サービス「TopazChat」は、個人運営による持続可能性の問題を抱えています。PebbleChatは、各ユーザーが自分で配信サーバーを立てられるようにすることで、TopazChatへの負荷を分散させることを目指しています。
@@ -58,8 +66,7 @@ VRChat内でのライブ配信サービス「TopazChat」は、個人運営に�
 | サービス/方式 | 遅延 | 用途適性 |
 |-------------|------|---------|
 | TopazChat | 約1秒 | DJイベント（MC同期重要） |
-| PebbleChat (HLS) | 約4秒 | 作業配信・映像流し |
-| PebbleChat (LL-HLS) | 約2秒（目標） | トーク系イベント |
+| PebbleChat (HLS) | 約4秒 | 作業配信・映像流し・トーク系イベント |
 
 ## 開発
 
@@ -99,7 +106,6 @@ npm run build
 ### Phase 3
 - [ ] OBSからのRTMP入力対応
 - [ ] 複数ソースの切り替え
-- [ ] LL-HLS対応（低遅延化）
 
 ## ポジショニング
 
