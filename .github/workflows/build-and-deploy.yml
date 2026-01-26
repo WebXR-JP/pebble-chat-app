@@ -5,11 +5,6 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version (e.g., 0.1.0)'
-        required: false
-        default: ''
 
 env:
   NODE_VERSION: '20'
@@ -36,12 +31,19 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      - name: Rename artifacts to fixed names
+        run: |
+          cd dist
+          for f in *-arm64.dmg; do [ -f "$f" ] && mv "$f" "PebbleChat-mac-arm64.dmg"; done
+          for f in *.dmg; do [ -f "$f" ] && [[ "$f" != *-arm64* ]] && mv "$f" "PebbleChat-mac-x64.dmg"; done
+          ls -la *.dmg
+
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mac-artifacts
           path: |
-            dist/*.dmg
+            dist/PebbleChat-mac-*.dmg
           retention-days: 1
 
   # Windows ビルド
@@ -63,12 +65,19 @@ jobs:
       - name: Build Electron app (Windows)
         run: npm run build && npx electron-builder --win --publish never
 
+      - name: Rename artifacts to fixed names
+        shell: bash
+        run: |
+          cd dist
+          for f in *.exe; do [ -f "$f" ] && mv "$f" "PebbleChat-win-x64.exe"; break; done
+          ls -la *.exe
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: win-artifacts
           path: |
-            dist/*.exe
+            dist/PebbleChat-win-x64.exe
           retention-days: 1
 
   # R2 にアップロード
@@ -76,31 +85,13 @@ jobs:
     needs: [build-mac, build-win]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Get version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            # タグから v を除去
-            VERSION="${GITHUB_REF_NAME#v}"
-          elif [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            # package.json から取得
-            VERSION=$(node -p "require('./package.json').version")
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
       - name: List artifacts
-        run: find artifacts -type f -name "*.dmg" -o -name "*.exe"
+        run: find artifacts -type f
 
       - name: Setup rclone
         run: |
@@ -124,51 +115,26 @@ jobs:
 
       - name: Prepare upload directory
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          mkdir -p upload/releases/${VERSION}
-
-          # DMG ファイルをコピー
-          for f in artifacts/mac-artifacts/*.dmg; do
-            if [ -f "$f" ]; then
-              cp "$f" "upload/releases/${VERSION}/"
-            fi
-          done
-
-          # EXE ファイルをコピー
-          for f in artifacts/win-artifacts/*.exe; do
-            if [ -f "$f" ]; then
-              cp "$f" "upload/releases/${VERSION}/"
-            fi
-          done
-
+          mkdir -p upload/releases
+          cp artifacts/mac-artifacts/*.dmg upload/releases/
+          cp artifacts/win-artifacts/*.exe upload/releases/
           echo "Files to upload:"
-          ls -la upload/releases/${VERSION}/
+          ls -la upload/releases/
 
-      - name: Upload to R2 (versioned)
+      - name: Upload to R2
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          rclone copy upload/releases/${VERSION}/ r2:${{ secrets.R2_BUCKET_NAME }}/releases/${VERSION}/ --progress
-
-      - name: Upload to R2 (latest) - only on tag push
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          rclone copy upload/releases/${VERSION}/ r2:${{ secrets.R2_BUCKET_NAME }}/releases/latest/ --progress
+          rclone copy upload/releases/ r2:${{ secrets.R2_BUCKET_NAME }}/releases/ --progress
 
       - name: Summary
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
           echo "## Upload Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Version: ${VERSION}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Uploaded files:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          ls -la upload/releases/${VERSION}/ >> $GITHUB_STEP_SUMMARY
+          ls -la upload/releases/ >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### R2 paths:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`releases/${VERSION}/\`" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "- \`releases/latest/\`" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "### R2 paths (fixed):" >> $GITHUB_STEP_SUMMARY
+          echo "- \`releases/PebbleChat-mac-x64.dmg\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`releases/PebbleChat-mac-arm64.dmg\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`releases/PebbleChat-win-x64.exe\`" >> $GITHUB_STEP_SUMMARY
