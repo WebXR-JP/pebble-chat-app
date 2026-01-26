@@ -35,6 +35,36 @@ export function SourceSelectModal({
     onRefresh()
   }, [])
 
+  // 権限がない場合は別のUI
+  if (needsPermission) {
+    return (
+      <div style={styles.overlay} onClick={onCancel}>
+        <div style={styles.permissionModal} onClick={(e) => e.stopPropagation()}>
+          <div style={styles.permissionContainer}>
+            <div style={styles.permissionIcon}>!</div>
+            <h4 style={styles.permissionTitle}>画面収録の権限が必要です</h4>
+            <p style={styles.permissionText}>
+              このアプリで画面をキャプチャするには、
+              <br />
+              システム設定で権限を許可してください。
+            </p>
+            <button style={styles.settingsButton} onClick={onOpenSettings}>
+              システム設定を開く
+            </button>
+            <p style={styles.permissionNote}>
+              設定後、このアプリを再起動してください。
+            </p>
+          </div>
+          <div style={styles.footer}>
+            <button style={styles.cancelButton} onClick={onCancel}>
+              キャンセル
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={styles.overlay} onClick={onCancel}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -70,22 +100,6 @@ export function SourceSelectModal({
         <div style={styles.sourceList}>
           {isLoading && filteredSources.length === 0 ? (
             <p style={styles.loadingText}>読み込み中...</p>
-          ) : needsPermission ? (
-            <div style={styles.permissionContainer}>
-              <div style={styles.permissionIcon}>!</div>
-              <h4 style={styles.permissionTitle}>画面収録の権限が必要です</h4>
-              <p style={styles.permissionText}>
-                このアプリで画面をキャプチャするには、
-                <br />
-                システム設定で権限を許可してください。
-              </p>
-              <button style={styles.settingsButton} onClick={onOpenSettings}>
-                システム設定を開く
-              </button>
-              <p style={styles.permissionNote}>
-                設定後、このアプリを再起動してください。
-              </p>
-            </div>
           ) : filteredSources.length === 0 ? (
             <p style={styles.emptyText}>{activeTab === 'screen' ? '画面' : 'ウィンドウ'}が見つかりません</p>
           ) : (
@@ -164,6 +178,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: '90%',
     maxWidth: '480px',
     height: 'calc(100vh - 72px)',
+    display: 'flex',
+    flexDirection: 'column',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1)',
+    border: `1px solid ${colors.border}`,
+    // @ts-expect-error: WebKit specific property
+    WebkitAppRegion: 'no-drag'
+  },
+  permissionModal: {
+    backgroundColor: colors.white,
+    borderRadius: '18px',
+    width: '90%',
+    maxWidth: '360px',
     display: 'flex',
     flexDirection: 'column',
     boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1)',
