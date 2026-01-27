@@ -35,24 +35,6 @@ export function SourceSelectModal({
     onRefresh()
   }, [])
 
-  // 読み込み中は別のUI
-  if (isLoading && sources.length === 0) {
-    return (
-      <div style={styles.overlay} onClick={onCancel}>
-        <div style={styles.loadingModal} onClick={(e) => e.stopPropagation()}>
-          <div style={styles.loadingContainer}>
-            <p style={styles.loadingText}>読み込み中...</p>
-          </div>
-          <div style={styles.footer}>
-            <button style={styles.cancelButton} onClick={onCancel}>
-              キャンセル
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // 権限がない場合は別のUI
   if (needsPermission) {
     return (
@@ -93,56 +75,64 @@ export function SourceSelectModal({
           </button>
         </div>
 
-        {/* タブ */}
-        <div style={styles.tabContainer}>
-          <button
-            style={{
-              ...styles.tab,
-              ...(activeTab === 'screen' ? styles.tabActive : styles.tabInactive)
-            }}
-            onClick={() => setActiveTab('screen')}
-          >
-            画面
-          </button>
-          <button
-            style={{
-              ...styles.tab,
-              ...(activeTab === 'window' ? styles.tabActive : styles.tabInactive)
-            }}
-            onClick={() => setActiveTab('window')}
-          >
-            ウィンドウ
-          </button>
-        </div>
-
-        <div style={styles.sourceList}>
-          {filteredSources.length === 0 ? (
-            <p style={styles.emptyText}>{activeTab === 'screen' ? '画面' : 'ウィンドウ'}が見つかりません</p>
-          ) : (
-            filteredSources.map((source) => (
-              <div
-                key={source.id}
-                style={styles.sourceItem}
-                onClick={() => onSelect(source.id)}
+        {isLoading ? (
+          <div style={styles.loadingContainer}>
+            <p style={styles.loadingText}>読み込み中...</p>
+          </div>
+        ) : (
+          <>
+            {/* タブ */}
+            <div style={styles.tabContainer}>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'screen' ? styles.tabActive : styles.tabInactive)
+                }}
+                onClick={() => setActiveTab('screen')}
               >
-                {source.thumbnail ? (
-                  <img
-                    src={source.thumbnail}
-                    alt={source.name}
-                    style={styles.thumbnail}
-                  />
-                ) : (
-                  <div style={styles.thumbnailPlaceholder}>
-                    {source.type === 'screen' ? '🖥️' : '🪟'}
+                画面
+              </button>
+              <button
+                style={{
+                  ...styles.tab,
+                  ...(activeTab === 'window' ? styles.tabActive : styles.tabInactive)
+                }}
+                onClick={() => setActiveTab('window')}
+              >
+                ウィンドウ
+              </button>
+            </div>
+
+            <div style={styles.sourceList}>
+              {filteredSources.length === 0 ? (
+                <p style={styles.emptyText}>{activeTab === 'screen' ? '画面' : 'ウィンドウ'}が見つかりません</p>
+              ) : (
+                filteredSources.map((source) => (
+                  <div
+                    key={source.id}
+                    style={styles.sourceItem}
+                    onClick={() => onSelect(source.id)}
+                  >
+                    {source.thumbnail ? (
+                      <img
+                        src={source.thumbnail}
+                        alt={source.name}
+                        style={styles.thumbnail}
+                      />
+                    ) : (
+                      <div style={styles.thumbnailPlaceholder}>
+                        {source.type === 'screen' ? '🖥️' : '🪟'}
+                      </div>
+                    )}
+                    <div style={styles.sourceInfo}>
+                      <span style={styles.sourceName}>{source.name}</span>
+                    </div>
                   </div>
-                )}
-                <div style={styles.sourceInfo}>
-                  <span style={styles.sourceName}>{source.name}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
 
         <div style={styles.footer}>
           <button style={styles.cancelButton} onClick={onCancel}>
@@ -226,11 +216,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     WebkitAppRegion: 'no-drag'
   },
   loadingContainer: {
+    flex: 1,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: '48px 20px'
+    justifyContent: 'center'
   },
   header: {
     display: 'flex',
