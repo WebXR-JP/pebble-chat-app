@@ -1,6 +1,6 @@
 # PebbleChat
 
-![PebbleChat](OGP.png)
+![PebbleChat](GitHub.png)
 
 VRChat / XRift 向けの簡単配信アプリ。ボタンひとつで配信URLを発行、あとは iwaSync や XRift Player に貼るだけ。
 
