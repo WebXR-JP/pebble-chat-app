@@ -79,7 +79,7 @@ export async function getCaptureSources(): Promise<CaptureSourcesResult> {
   const permission = getScreenRecordingPermissionStatus()
   return {
     sources: [],
-    permission: permission === 'granted' ? 'denied' : permission
+    permission
   }
 }
 
