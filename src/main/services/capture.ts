@@ -50,36 +50,34 @@ export async function getCaptureSources(): Promise<CaptureSourcesResult> {
       fetchWindowIcons: true
     })
 
-    // ソースが取得できれば権限あり
-    if (sources.length > 0) {
-      const captureSourceList: CaptureSource[] = sources.map((source) => {
-        let thumbnail = ''
-        if (!source.thumbnail.isEmpty()) {
-          const pngBuffer = source.thumbnail.toPNG()
-          thumbnail = `data:image/png;base64,${pngBuffer.toString('base64')}`
-        }
-        return {
-          id: source.id,
-          name: source.name,
-          thumbnail,
-          type: source.id.startsWith('screen:') ? 'screen' : 'window'
-        }
-      })
-
-      return {
-        sources: captureSourceList,
-        permission: 'granted'
+    // desktopCapturer.getSources()が成功した場合は権限あり
+    const captureSourceList: CaptureSource[] = sources.map((source) => {
+      let thumbnail = ''
+      if (!source.thumbnail.isEmpty()) {
+        const pngBuffer = source.thumbnail.toPNG()
+        thumbnail = `data:image/png;base64,${pngBuffer.toString('base64')}`
       }
+      return {
+        id: source.id,
+        name: source.name,
+        thumbnail,
+        type: source.id.startsWith('screen:') ? 'screen' : 'window'
+      }
+    })
+
+    return {
+      sources: captureSourceList,
+      permission: 'granted'
     }
   } catch (error) {
     console.error('[Capture] Failed to get sources:', error)
   }
 
-  // ソースが取得できない場合は権限状態を確認
+  // エラーが発生した場合は権限状態を確認
   const permission = getScreenRecordingPermissionStatus()
   return {
     sources: [],
-    permission
+    permission: permission === 'granted' ? 'denied' : permission
   }
 }
 
