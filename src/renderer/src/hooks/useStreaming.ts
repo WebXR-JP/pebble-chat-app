@@ -16,6 +16,7 @@ export function useStreaming(): UseStreamingResult {
     rtmpUrl: null,
     hlsUrl: null,
     publicUrl: null,
+    readyForPlayback: false,
     error: null
   })
   const [isLoading, setIsLoading] = useState(false)

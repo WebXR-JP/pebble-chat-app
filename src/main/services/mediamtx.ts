@@ -197,3 +197,60 @@ export async function checkMediaMTXHealth(): Promise<boolean> {
     return false
   }
 }
+
+// HLSエンドポイントが再生可能かチェック（セグメントが生成されているか）
+export async function checkHlsPlaybackReady(): Promise<boolean> {
+  try {
+    // GETリクエストで実際にコンテンツを取得（HEADだと正しく動作しないサーバーがある）
+    const response = await fetch('http://localhost:8888/live_hls/index.m3u8', {
+      method: 'GET'
+    })
+    // 200 = セグメントが生成されており再生可能
+    // 404 = まだセグメントが生成されていない（準備中）
+    return response.status === 200
+  } catch {
+    return false
+  }
+}
+
+// HLSが再生可能になるまでポーリング
+export function pollHlsPlaybackReady(
+  onReady: () => void,
+  options: { interval?: number; maxAttempts?: number } = {}
+): () => void {
+  const { interval = 1000, maxAttempts = 60 } = options
+  let attempts = 0
+  let stopped = false
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+  const poll = async (): Promise<void> => {
+    if (stopped) return
+
+    attempts++
+    const isReady = await checkHlsPlaybackReady()
+
+    if (isReady) {
+      console.log('[MediaMTX] HLS playback ready')
+      onReady()
+      return
+    }
+
+    if (attempts >= maxAttempts) {
+      console.log('[MediaMTX] HLS playback check timed out')
+      return
+    }
+
+    timeoutId = setTimeout(poll, interval)
+  }
+
+  // 最初のポーリングを開始
+  poll()
+
+  // キャンセル用の関数を返す
+  return (): void => {
+    stopped = true
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+  }
+}

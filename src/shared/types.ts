@@ -46,6 +46,7 @@ export interface StreamInfo {
   rtmpUrl: string | null
   hlsUrl: string | null
   publicUrl: string | null
+  readyForPlayback: boolean  // HLSエンドポイントが実際に再生可能かどうか
   error: string | null
 }
 

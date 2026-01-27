@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { IPC_CHANNELS, SetupProgress, StreamInfo, CaptureInfo, CaptureSourcesResult } from '../../shared/types'
 import { isMediaMTXInstalled, installMediaMTX, isFFmpegInstalled, installFFmpeg } from '../services/binary'
-import { startMediaMTX, stopMediaMTX, getMediaMTXStatus } from '../services/mediamtx'
+import { startMediaMTX, stopMediaMTX, getMediaMTXStatus, pollHlsPlaybackReady } from '../services/mediamtx'
 import {
   isCloudflaredInstalled,
   installCloudflared,
@@ -24,8 +24,12 @@ let currentStreamInfo: StreamInfo = {
   rtmpUrl: null,
   hlsUrl: null,
   publicUrl: null,
+  readyForPlayback: false,
   error: null
 }
+
+// HLSポーリングのキャンセル関数を保持
+let cancelHlsPolling: (() => void) | null = null
 
 // セットアップ状態を送信
 function sendSetupProgress(window: BrowserWindow | null, progress: SetupProgress): void {
@@ -173,6 +177,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         rtmpUrl: null,
         hlsUrl: null,
         publicUrl: null,
+        readyForPlayback: false,
         error: null
       })
 
@@ -194,10 +199,23 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         rtmpUrl: 'rtmp://localhost:1935/live',
         hlsUrl: 'http://localhost:8888/live_hls/index.m3u8',
         publicUrl: getHlsPublicUrl(),
+        readyForPlayback: false,  // まだ準備中
         error: null
       }
 
       sendStreamStatus(window, info)
+
+      // HLSが再生可能になるまでバックグラウンドでポーリング
+      cancelHlsPolling = pollHlsPlaybackReady(() => {
+        // コールバック時点で最新のウィンドウ参照を取得
+        const currentWindow = getMainWindow()
+        const readyInfo: StreamInfo = {
+          ...currentStreamInfo,
+          readyForPlayback: true
+        }
+        sendStreamStatus(currentWindow, readyInfo)
+      })
+
       return info
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -206,6 +224,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         rtmpUrl: null,
         hlsUrl: null,
         publicUrl: null,
+        readyForPlayback: false,
         error: errorMessage
       }
       sendStreamStatus(window, info)
@@ -217,11 +236,18 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
   ipcMain.handle(IPC_CHANNELS.STREAM_STOP, async (): Promise<void> => {
     const window = getMainWindow()
 
+    // HLSポーリングをキャンセル
+    if (cancelHlsPolling) {
+      cancelHlsPolling()
+      cancelHlsPolling = null
+    }
+
     sendStreamStatus(window, {
       status: 'stopping',
       rtmpUrl: null,
       hlsUrl: null,
       publicUrl: null,
+      readyForPlayback: false,
       error: null
     })
 
@@ -233,6 +259,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       rtmpUrl: null,
       hlsUrl: null,
       publicUrl: null,
+      readyForPlayback: false,
       error: null
     })
   })
@@ -248,6 +275,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         rtmpUrl: 'rtmp://localhost:1935/live',
         hlsUrl: 'http://localhost:8888/live_hls/index.m3u8',
         publicUrl: getHlsPublicUrl(),
+        readyForPlayback: currentStreamInfo.readyForPlayback,
         error: null
       }
     }

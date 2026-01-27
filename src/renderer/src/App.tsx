@@ -150,12 +150,20 @@ function App() {
                 <span
                   style={{
                     ...styles.statusDot,
-                    backgroundColor: capture.connectionState === 'connected' || streaming.isStreaming ? '#4caf50' : '#ff9800'
+                    backgroundColor: capture.connectionState === 'connected'
+                      ? streaming.streamInfo.readyForPlayback
+                        ? '#4caf50'  // 配信中（再生可能）
+                        : '#ff9800'  // 準備中
+                      : streaming.isStreaming
+                        ? '#ff9800'  // OBS接続待ち
+                        : '#ff9800'  // 接続中
                   }}
                 />
                 <span style={styles.statusText}>
                   {capture.connectionState === 'connected'
-                    ? '配信中'
+                    ? streaming.streamInfo.readyForPlayback
+                      ? '配信中'
+                      : '準備中...'
                     : streaming.isStreaming
                       ? 'OBS接続待ち'
                       : '接続中...'}
