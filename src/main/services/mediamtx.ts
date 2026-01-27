@@ -1,8 +1,20 @@
-import { spawn, ChildProcess } from 'child_process'
+import { spawn, ChildProcess, execSync } from 'child_process'
 import { getMediaMTXPath, getMediaMTXConfigPath } from '../utils/paths'
 import { updateMediaMTXConfig } from './binary'
 
 let mediamtxProcess: ChildProcess | null = null
+
+// 既存のMediaMTXプロセスを強制終了（Windows用）
+function killExistingMediaMTX(): void {
+  if (process.platform === 'win32') {
+    try {
+      execSync('taskkill /F /IM mediamtx.exe', { stdio: 'ignore' })
+      console.log('[MediaMTX] Killed existing process')
+    } catch {
+      // プロセスが存在しない場合はエラーになるが無視
+    }
+  }
+}
 
 export interface MediaMTXStatus {
   running: boolean
@@ -19,6 +31,9 @@ export async function startMediaMTX(): Promise<MediaMTXStatus> {
       error: null
     }
   }
+
+  // Windowsの場合、既存プロセスを強制終了
+  killExistingMediaMTX()
 
   // 起動前に設定ファイルを再生成（FFmpegパスを最新に）
   try {
