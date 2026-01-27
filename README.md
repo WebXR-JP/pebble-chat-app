@@ -11,13 +11,13 @@ VRChat / XRift 向けの簡単配信アプリ。ボタンひとつで配信URL�
 - **軽量**: 追加ソフト不要、アプリ1つで完結
 - **安全**: 難しいネットワーク設定は不要
 
-## ダウンロード
+## ⚠️ 重要なお知らせ
 
-| OS | ダウンロード |
-|----|------------|
-| macOS (Apple Silicon) | [PebbleChat-mac-arm64.dmg](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/PebbleChat-mac-arm64.dmg) |
-| macOS (Intel) | [PebbleChat-mac-x64.dmg](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/PebbleChat-mac-x64.dmg) |
-| Windows | [PebbleChat-win-x64.exe](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/PebbleChat-win-x64.exe) |
+現在、本アプリで使用している Cloudflare Quick Tunnel による動画配信が [Cloudflare の利用規約](https://www.cloudflare.com/service-specific-terms-application-services/#content-delivery-network-terms) に違反する可能性が高いことが判明したため、**ダウンロードリンクを一時停止しています**。
+
+詳細: [Issue #12](https://github.com/WebXR-JP/pebble-chat-app/issues/12)
+
+代替手段を検討中です。
 
 ## 背景
 
