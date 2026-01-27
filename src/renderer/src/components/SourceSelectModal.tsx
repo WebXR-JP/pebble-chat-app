@@ -35,6 +35,24 @@ export function SourceSelectModal({
     onRefresh()
   }, [])
 
+  // 読み込み中は別のUI
+  if (isLoading && sources.length === 0) {
+    return (
+      <div style={styles.overlay} onClick={onCancel}>
+        <div style={styles.loadingModal} onClick={(e) => e.stopPropagation()}>
+          <div style={styles.loadingContainer}>
+            <p style={styles.loadingText}>読み込み中...</p>
+          </div>
+          <div style={styles.footer}>
+            <button style={styles.cancelButton} onClick={onCancel}>
+              キャンセル
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // 権限がない場合は別のUI
   if (needsPermission) {
     return (
@@ -98,9 +116,7 @@ export function SourceSelectModal({
         </div>
 
         <div style={styles.sourceList}>
-          {isLoading && filteredSources.length === 0 ? (
-            <p style={styles.loadingText}>読み込み中...</p>
-          ) : filteredSources.length === 0 ? (
+          {filteredSources.length === 0 ? (
             <p style={styles.emptyText}>{activeTab === 'screen' ? '画面' : 'ウィンドウ'}が見つかりません</p>
           ) : (
             filteredSources.map((source) => (
@@ -197,6 +213,25 @@ const styles: { [key: string]: React.CSSProperties } = {
     // @ts-expect-error: WebKit specific property
     WebkitAppRegion: 'no-drag'
   },
+  loadingModal: {
+    backgroundColor: colors.white,
+    borderRadius: '18px',
+    width: '90%',
+    maxWidth: '360px',
+    display: 'flex',
+    flexDirection: 'column',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1)',
+    border: `1px solid ${colors.border}`,
+    // @ts-expect-error: WebKit specific property
+    WebkitAppRegion: 'no-drag'
+  },
+  loadingContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '48px 20px'
+  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -262,9 +297,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignContent: 'start'
   },
   loadingText: {
+    margin: 0,
     textAlign: 'center',
     color: colors.textSecondary,
-    padding: '40px 0',
     fontSize: '14px'
   },
   emptyText: {
