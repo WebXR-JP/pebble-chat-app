@@ -10,6 +10,7 @@
       - curl
       - wget
       - unzip
+      - ufw
     state: present
 
 - name: Configure UFW - allow SSH
