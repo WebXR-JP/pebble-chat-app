@@ -11,7 +11,31 @@
       - wget
       - unzip
       - ufw
+      - iptables-persistent
     state: present
+
+# Oracle Cloud のデフォルト iptables には REJECT ルールがあるため、
+# UFW より前に直接 iptables でポートを開放する必要がある
+- name: Allow HTTP in iptables (Oracle Cloud)
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "80"
+    jump: ACCEPT
+    action: insert
+    rule_num: 5
+
+- name: Allow RTMP in iptables (Oracle Cloud)
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "1935"
+    jump: ACCEPT
+    action: insert
+    rule_num: 5
+
+- name: Save iptables rules
+  command: netfilter-persistent save
 
 - name: Configure UFW - allow SSH
   ufw:
