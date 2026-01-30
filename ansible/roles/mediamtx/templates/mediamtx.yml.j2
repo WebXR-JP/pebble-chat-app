@@ -1,0 +1,35 @@
+# MediaMTX Configuration for PebbleChat Relay Server
+# RTMP受信 → HLSパッケージング（再エンコードなし）
+
+# ログ設定
+logLevel: info
+logDestinations: [stdout]
+
+# RTSP（無効化）
+rtsp: no
+
+# RTMP入力設定
+rtmp: yes
+rtmpAddress: :{{ mediamtx_port_rtmp }}
+
+# WebRTC（無効化）
+webrtc: no
+
+# HLS出力設定（低遅延向け）
+# CORSはCaddyで設定するため、ここでは設定しない
+hls: yes
+hlsAddress: :{{ mediamtx_port_hls }}
+hlsVariant: mpegts
+hlsSegmentCount: 3
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+
+# 不要なプロトコルを無効化
+api: no
+metrics: no
+pprof: no
+srt: no
+
+# パス設定（パススルー、再エンコードなし）
+paths:
+  all:

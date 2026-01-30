@@ -18,10 +18,10 @@ release/
 
 # MediaMTX / cloudflared binaries
 bin/
-mediamtx
-mediamtx.exe
-cloudflared
-cloudflared.exe
+/mediamtx
+/mediamtx.exe
+/cloudflared
+/cloudflared.exe
 
 # Logs
 logs/
