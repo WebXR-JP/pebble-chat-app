@@ -199,13 +199,13 @@ export async function checkMediaMTXHealth(): Promise<boolean> {
 }
 
 // リレーサーバー設定
-const RELAY_SERVER_IP = '161.33.189.110'
+const RELAY_SERVER_HOST = 'pebble.xrift.net'
 
 // HLSエンドポイントが再生可能かチェック（セグメントが生成されているか）
 export async function checkHlsPlaybackReady(): Promise<boolean> {
   try {
     // リレーサーバーのHLSエンドポイントをチェック
-    const response = await fetch(`http://${RELAY_SERVER_IP}/live/index.m3u8`, {
+    const response = await fetch(`https://${RELAY_SERVER_HOST}/live/index.m3u8`, {
       method: 'GET'
     })
     // 200 = セグメントが生成されており再生可能

@@ -77,6 +77,7 @@ VRChat内でのライブ配信サービス「TopazChat」は、個人運営に�
 | スペック | 1 OCPU / 1 GB RAM |
 | OS | Ubuntu 22.04 Minimal |
 | リージョン | Japan East (Tokyo) |
+| ドメイン | pebble.xrift.net |
 | 月額コスト | **$0**（無料枠） |
 | 帯域 | 10TB/月（約33,000視聴時間 @ 360p） |
 

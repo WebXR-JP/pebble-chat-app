@@ -11,7 +11,7 @@ import { getPlatform, getMediaMTXDownloadUrl, getMediaMTXBinaryName, getFFmpegDo
 const MEDIAMTX_VERSION = '1.9.3'
 
 // リレーサーバー設定
-const RELAY_SERVER_IP = '161.33.189.110'
+const RELAY_SERVER_HOST = 'pebble.xrift.net'
 
 // MediaMTXがインストール済みか確認
 export async function isMediaMTXInstalled(): Promise<boolean> {
@@ -272,7 +272,7 @@ srt: no
 paths:
   live:
     # WebRTC入力後、FFmpegでH.264に変換してリレーサーバーへRTMP送出
-    runOnReady: ${ffmpegCommand} -fflags nobuffer -flags low_delay -i rtsp://localhost:8554/live -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -f flv rtmp://${RELAY_SERVER_IP}:1935/live
+    runOnReady: ${ffmpegCommand} -fflags nobuffer -flags low_delay -i rtsp://localhost:8554/live -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -f flv rtmp://${RELAY_SERVER_HOST}:1935/live
     runOnReadyRestart: yes
 
   all_others:

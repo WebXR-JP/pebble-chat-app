@@ -11,8 +11,8 @@ import {
 } from '../services/capture'
 
 // リレーサーバー設定
-const RELAY_SERVER_IP = '161.33.189.110'
-const RELAY_SERVER_URL = `http://${RELAY_SERVER_IP}`
+const RELAY_SERVER_HOST = 'pebble.xrift.net'
+const RELAY_SERVER_URL = `https://${RELAY_SERVER_HOST}`
 
 let currentStreamInfo: StreamInfo = {
   status: 'idle',
@@ -148,7 +148,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
 
       const info: StreamInfo = {
         status: 'running',
-        rtmpUrl: `rtmp://${RELAY_SERVER_IP}:1935/live`,  // サーバーのRTMPへ送出
+        rtmpUrl: `rtmp://${RELAY_SERVER_HOST}:1935/live`,  // サーバーのRTMPへ送出
         hlsUrl: null,  // ローカルHLSは使用しない
         publicUrl: `${RELAY_SERVER_URL}/live/index.m3u8`,  // サーバー経由のHLS
         readyForPlayback: false,
@@ -221,7 +221,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
     if (mediamtxStatus.running) {
       return {
         status: 'running',
-        rtmpUrl: `rtmp://${RELAY_SERVER_IP}:1935/live`,
+        rtmpUrl: `rtmp://${RELAY_SERVER_HOST}:1935/live`,
         hlsUrl: null,
         publicUrl: `${RELAY_SERVER_URL}/live/index.m3u8`,
         readyForPlayback: currentStreamInfo.readyForPlayback,

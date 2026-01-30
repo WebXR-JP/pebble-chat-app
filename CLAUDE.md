@@ -36,6 +36,7 @@ PC (H.264/360p) ─── RTMP ───→ Oracle Cloud ───→ Internet
 | スペック | 1 OCPU / 1 GB RAM |
 | OS | Ubuntu 22.04 Minimal |
 | パブリックIP | 161.33.189.110 |
+| ドメイン | pebble.xrift.net |
 | リージョン | Japan East (Tokyo) |
 | 月額コスト | $0（無料枠） |
 | 帯域制限 | 10TB/月（無料枠） |
@@ -53,13 +54,14 @@ ssh ubuntu@161.33.189.110
 | ポート | プロトコル | 用途 |
 |-------|----------|------|
 | 22 | TCP | SSH |
-| 80 | TCP | HTTP (HLS配信) |
+| 80 | TCP | HTTP (リダイレクト) |
+| 443 | TCP | HTTPS (HLS配信) |
 | 1935 | TCP | RTMP (配信受信) |
 
 ### HLS URL
 
 ```
-http://161.33.189.110/live/index.m3u8
+https://pebble.xrift.net/live/index.m3u8
 ```
 
 ## 主要ライブラリ
