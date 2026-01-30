@@ -52,7 +52,10 @@ const electronAPI: ElectronAPI = {
   openScreenRecordingSettings: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_OPEN_SETTINGS),
 
   // ウィンドウ
-  resizeWindow: (height: number) => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_RESIZE, height)
+  resizeWindow: (height: number) => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_RESIZE, height),
+  minimizeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_MINIMIZE),
+  closeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_CLOSE),
+  getPlatform: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_PLATFORM)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

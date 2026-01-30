@@ -1,4 +1,4 @@
-:{{ caddy_http_port }} {
+pebble.xrift.net {
     # HLS配信（MediaMTXからプロキシ）
     reverse_proxy /*/index.m3u8 localhost:{{ mediamtx_port_hls }}
     reverse_proxy /*/*.ts localhost:{{ mediamtx_port_hls }}

@@ -25,6 +25,15 @@
     action: insert
     rule_num: 5
 
+- name: Allow HTTPS in iptables (Oracle Cloud)
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "443"
+    jump: ACCEPT
+    action: insert
+    rule_num: 5
+
 - name: Allow RTMP in iptables (Oracle Cloud)
   iptables:
     chain: INPUT
@@ -47,6 +56,12 @@
   ufw:
     rule: allow
     port: "80"
+    proto: tcp
+
+- name: Configure UFW - allow HTTPS
+  ufw:
+    rule: allow
+    port: "443"
     proto: tcp
 
 - name: Configure UFW - allow RTMP

@@ -7,6 +7,9 @@ import { IPC_CHANNELS } from '../shared/types'
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
+  // プラットフォームごとのウィンドウ設定
+  const isMac = process.platform === 'darwin'
+
   mainWindow = new BrowserWindow({
     width: 480,
     height: 540,
@@ -14,8 +17,11 @@ function createWindow(): void {
     minHeight: 440,
     show: false,
     autoHideMenuBar: true,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 16 },
+    // macOS: hiddenInset（信号機ボタンを残す）
+    // Windows: frame: false（完全フレームレス）
+    ...(isMac
+      ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 16 } }
+      : { frame: false }),
     icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -80,6 +86,25 @@ app.whenReady().then(() => {
       const [width] = mainWindow.getSize()
       mainWindow.setSize(width, height, true)
     }
+  })
+
+  // ウィンドウ最小化
+  ipcMain.handle(IPC_CHANNELS.WINDOW_MINIMIZE, async () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.minimize()
+    }
+  })
+
+  // ウィンドウを閉じる
+  ipcMain.handle(IPC_CHANNELS.WINDOW_CLOSE, async () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close()
+    }
+  })
+
+  // プラットフォーム取得
+  ipcMain.handle(IPC_CHANNELS.WINDOW_GET_PLATFORM, async () => {
+    return process.platform
   })
 
   // ウィンドウ作成

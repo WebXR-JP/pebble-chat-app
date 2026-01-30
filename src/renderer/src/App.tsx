@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import logoImage from './assets/logo.png'
 import { SetupProgress } from './components/SetupProgress'
 import { UrlDisplay } from './components/UrlDisplay'
@@ -6,7 +6,7 @@ import { SourceSelectModal } from './components/SourceSelectModal'
 import { useSetup } from './hooks/useSetup'
 import { useStreaming } from './hooks/useStreaming'
 import { useCapture } from './hooks/useCapture'
-import { CaptureSource } from '../../shared/types'
+import { CaptureSource, Platform } from '../../shared/types'
 
 type StreamMode = 'direct' | 'obs'
 type AppState = 'idle' | 'selecting' | 'streaming'
@@ -18,6 +18,12 @@ function App() {
   const [streamMode, setStreamMode] = useState<StreamMode>('direct')
   const [appState, setAppState] = useState<AppState>('idle')
   const [selectedSource, setSelectedSource] = useState<CaptureSource | null>(null)
+  const [platform, setPlatform] = useState<Platform | null>(null)
+
+  // プラットフォーム取得
+  useEffect(() => {
+    window.electronAPI.getPlatform().then(setPlatform)
+  }, [])
 
   // 配信開始ボタン押下
   const handleStartClick = () => {
@@ -69,13 +75,40 @@ function App() {
   const isStreaming = capture.isCapturing || streaming.isStreaming
   const isLoading = capture.isLoading || streaming.isLoading
 
+  // ウィンドウ操作
+  const handleMinimize = () => window.electronAPI.minimizeWindow()
+  const handleClose = () => window.electronAPI.closeWindow()
+
   return (
     <div style={styles.container}>
       {/* ドラッグ領域（常に表示） */}
       <div style={styles.dragRegion} />
 
+      {/* Windows用カスタムウィンドウコントロール */}
+      {platform === 'win32' && (
+        <div style={styles.windowControls}>
+          <button
+            style={styles.windowControlButton}
+            onClick={handleMinimize}
+            title="最小化"
+          >
+            &#x2212;
+          </button>
+          <button
+            style={{ ...styles.windowControlButton, ...styles.closeButton }}
+            onClick={handleClose}
+            title="閉じる"
+          >
+            &#x2715;
+          </button>
+        </div>
+      )}
+
       {appState !== 'streaming' && (
-        <header style={styles.header}>
+        <header style={{
+          ...styles.header,
+          paddingTop: platform === 'win32' ? '8px' : '32px'
+        }}>
           <img src={logoImage} alt="PebbleChat" style={styles.logo} />
           <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ</p>
         </header>
@@ -143,7 +176,10 @@ function App() {
 
         {/* 配信中画面 */}
         {setup.isReady && appState === 'streaming' && (
-          <div style={styles.streamingScreen}>
+          <div style={{
+            ...styles.streamingScreen,
+            paddingTop: platform === 'win32' ? '8px' : '32px'
+          }}>
             {/* ステータス */}
             <div style={styles.statusCard}>
               <div style={styles.statusHeader}>
@@ -279,6 +315,30 @@ const styles: { [key: string]: React.CSSProperties } = {
     height: '32px',
     // @ts-expect-error: WebKit specific property for draggable region
     WebkitAppRegion: 'drag'
+  },
+  windowControls: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    display: 'flex',
+    zIndex: 1000,
+    // @ts-expect-error: WebKit specific property for non-draggable region
+    WebkitAppRegion: 'no-drag'
+  },
+  windowControlButton: {
+    width: '46px',
+    height: '32px',
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    fontSize: '14px',
+    color: colors.textSecondary,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  closeButton: {
+    color: colors.textPrimary
   },
   header: {
     textAlign: 'center',
