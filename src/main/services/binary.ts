@@ -272,7 +272,7 @@ srt: no
 paths:
   live:
     # WebRTC入力後、FFmpegでH.264に変換してリレーサーバーへRTMP送出
-    runOnReady: ${ffmpegCommand} -fflags nobuffer -flags low_delay -i rtsp://localhost:8554/live -c:v libx264 -preset ultrafast -tune zerolatency -g 30 -f flv rtmp://${RELAY_SERVER_HOST}:1935/live
+    runOnReady: ${ffmpegCommand} -fflags nobuffer -flags low_delay -i rtsp://localhost:8554/live -vf scale=640:360 -c:v libx264 -preset ultrafast -tune zerolatency -b:v 500k -maxrate 500k -bufsize 1000k -g 30 -f flv rtmp://${RELAY_SERVER_HOST}:1935/live
     runOnReadyRestart: yes
 
   all_others:
