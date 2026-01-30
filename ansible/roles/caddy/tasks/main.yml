@@ -1,0 +1,39 @@
+---
+- name: Install Caddy dependencies
+  apt:
+    name:
+      - debian-keyring
+      - debian-archive-keyring
+      - apt-transport-https
+    state: present
+
+- name: Add Caddy GPG key
+  get_url:
+    url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+    dest: /usr/share/keyrings/caddy-stable-archive-keyring.asc
+    mode: '0644'
+
+- name: Add Caddy repository
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.asc] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main"
+    state: present
+    filename: caddy-stable
+
+- name: Install Caddy
+  apt:
+    name: caddy
+    state: present
+    update_cache: yes
+
+- name: Copy Caddyfile
+  template:
+    src: Caddyfile.j2
+    dest: /etc/caddy/Caddyfile
+    mode: '0644'
+  notify: Restart Caddy
+
+- name: Enable and start Caddy
+  systemd:
+    name: caddy
+    enabled: yes
+    state: started

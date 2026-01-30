@@ -35,7 +35,6 @@ export type SetupStatus = 'pending' | 'downloading' | 'ready' | 'error'
 // セットアップ進捗
 export interface SetupProgress {
   mediamtx: SetupStatus
-  cloudflared: SetupStatus
   ffmpeg: SetupStatus
   message: string
 }
@@ -84,7 +83,10 @@ export const IPC_CHANNELS = {
   CONFIG_SET: 'config:set',
 
   // ウィンドウ
-  WINDOW_RESIZE: 'window:resize'
+  WINDOW_RESIZE: 'window:resize',
+  WINDOW_MINIMIZE: 'window:minimize',
+  WINDOW_CLOSE: 'window:close',
+  WINDOW_GET_PLATFORM: 'window:getPlatform'
 } as const
 
 // IPC API 型定義
@@ -110,4 +112,7 @@ export interface ElectronAPI {
 
   // ウィンドウ
   resizeWindow: (height: number) => Promise<void>
+  minimizeWindow: () => Promise<void>
+  closeWindow: () => Promise<void>
+  getPlatform: () => Promise<Platform>
 }

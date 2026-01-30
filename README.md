@@ -11,14 +11,6 @@ VRChat / XRift 向けの簡単配信アプリ。ボタンひとつで配信URL�
 - **軽量**: 追加ソフト不要、アプリ1つで完結
 - **安全**: 難しいネットワーク設定は不要
 
-## ⚠️ 重要なお知らせ
-
-現在、本アプリで使用している Cloudflare Quick Tunnel による動画配信が [Cloudflare の利用規約](https://www.cloudflare.com/service-specific-terms-application-services/#content-delivery-network-terms) に違反する可能性が高いことが判明したため、**ダウンロードリンクを一時停止しています**。
-
-詳細: [Issue #12](https://github.com/WebXR-JP/pebble-chat-app/issues/12)
-
-代替手段を検討中です。
-
 ## 背景
 
 VRChat内でのライブ配信サービス「TopazChat」は、個人運営による持続可能性の問題を抱えています。PebbleChatは、各ユーザーが自分で配信サーバーを立てられるようにすることで、TopazChatへの負荷を分散させることを目指しています。
@@ -45,17 +37,23 @@ VRChat内でのライブ配信サービス「TopazChat」は、個人運営に�
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Electron App                                           │
+│  Electron App (PC)                                      │
 ├─────────────────────────────────────────────────────────┤
-│  desktopCapturer → MediaMTX (HLS変換) → cloudflared    │
+│  desktopCapturer → MediaMTX (H.264エンコード) → RTMP   │
 │                              │                          │
 │                         React UI                        │
 └─────────────────────────────────────────────────────────┘
                               │
-                              ▼
-                    Cloudflare Quick Tunnels
+                              ▼ RTMP
+                    ┌─────────────────────┐
+                    │  リレーサーバー       │
+                    │  (Oracle Cloud)     │
+                    ├─────────────────────┤
+                    │  MediaMTX (HLS変換)  │
+                    │  Caddy (HTTPプロキシ)│
+                    └─────────────────────┘
                               │
-                              ▼
+                              ▼ HLS
                  iwaSync (VRChat) / XRift Player
 ```
 
@@ -66,8 +64,21 @@ VRChat内でのライブ配信サービス「TopazChat」は、個人運営に�
 | フレームワーク | Electron | デスクトップアプリ |
 | UI | React + TypeScript | ユーザーインターフェース |
 | 画面キャプチャ | Electron desktopCapturer API | 画面/ウィンドウ取得 |
-| メディアサーバー | MediaMTX | HLS変換 |
-| トンネル | cloudflared | 外部公開 |
+| メディアサーバー | MediaMTX | H.264エンコード / HLS変換 |
+| HTTPプロキシ | Caddy | リバースプロキシ |
+| インフラ | Oracle Cloud Always Free | リレーサーバー |
+
+## リレーサーバー
+
+| 項目 | 値 |
+|-----|---|
+| プロバイダ | Oracle Cloud Always Free |
+| シェイプ | VM.Standard.E2.1.Micro |
+| スペック | 1 OCPU / 1 GB RAM |
+| OS | Ubuntu 22.04 Minimal |
+| リージョン | Japan East (Tokyo) |
+| 月額コスト | **$0**（無料枠） |
+| 帯域 | 10TB/月（約33,000視聴時間 @ 360p） |
 
 ## 遅延について
 
@@ -96,12 +107,24 @@ npm run dev
 npm run build
 ```
 
+### サーバー管理（Ansible）
+
+```bash
+cd ansible
+
+# 接続テスト
+ansible -i inventory.yml pebble-relay -m ping
+
+# プレイブック実行
+ansible-playbook -i inventory.yml playbook.yml
+```
+
 ## 関連リンク
 
 - [XRift](https://xrift.jp) - WebXRベースのメタバース
 - [TopazChat](https://booth.pm/ja/items/1752066)
 - [MediaMTX](https://github.com/bluenviron/mediamtx)
-- [Cloudflare Quick Tunnels](https://trycloudflare.com/)
+- [Oracle Cloud Always Free](https://www.oracle.com/cloud/free/)
 
 ## ライセンス
 

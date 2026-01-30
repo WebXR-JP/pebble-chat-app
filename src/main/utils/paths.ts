@@ -2,7 +2,7 @@ import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { execSync } from 'child_process'
-import { getMediaMTXBinaryName, getCloudflaredBinaryName, getFFmpegBinaryName, getPlatform } from './platform'
+import { getMediaMTXBinaryName, getFFmpegBinaryName, getPlatform } from './platform'
 
 // ユーザーデータディレクトリ（バイナリ保存場所）
 export function getUserDataPath(): string {
@@ -22,11 +22,6 @@ export function getMediaMTXPath(): string {
 // MediaMTX設定ファイルパス
 export function getMediaMTXConfigPath(): string {
   return path.join(getBinariesPath(), 'mediamtx.yml')
-}
-
-// cloudflaredバイナリパス
-export function getCloudflaredPath(): string {
-  return path.join(getBinariesPath(), getCloudflaredBinaryName())
 }
 
 // バンドルされたFFmpegバイナリパス

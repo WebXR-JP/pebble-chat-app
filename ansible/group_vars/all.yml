@@ -1,0 +1,12 @@
+# サーバー共通変数
+
+# MediaMTX
+mediamtx_version: "1.9.3"
+mediamtx_port_rtmp: 1935
+mediamtx_port_hls: 8888
+
+# Caddy
+caddy_http_port: 80
+
+# ストリームパス
+stream_path: "live"

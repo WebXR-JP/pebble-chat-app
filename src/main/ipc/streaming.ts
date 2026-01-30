@@ -3,21 +3,16 @@ import { IPC_CHANNELS, SetupProgress, StreamInfo, CaptureInfo, CaptureSourcesRes
 import { isMediaMTXInstalled, installMediaMTX, isFFmpegInstalled, installFFmpeg } from '../services/binary'
 import { startMediaMTX, stopMediaMTX, getMediaMTXStatus, pollHlsPlaybackReady } from '../services/mediamtx'
 import {
-  isCloudflaredInstalled,
-  installCloudflared,
-  startTunnel,
-  stopTunnel,
-  getTunnelStatus,
-  getHlsPublicUrl
-} from '../services/tunnel'
-import {
   getCaptureSources,
   startCaptureSession,
   stopCaptureSession,
   getCaptureStatus,
-  setCaptureError,
   openScreenRecordingSettings
 } from '../services/capture'
+
+// リレーサーバー設定
+const RELAY_SERVER_IP = '161.33.189.110'
+const RELAY_SERVER_URL = `http://${RELAY_SERVER_IP}`
 
 let currentStreamInfo: StreamInfo = {
   status: 'idle',
@@ -58,15 +53,13 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
   // セットアップ確認
   ipcMain.handle(IPC_CHANNELS.SETUP_CHECK, async (): Promise<SetupProgress> => {
     const mediamtxReady = await isMediaMTXInstalled()
-    const cloudflaredReady = await isCloudflaredInstalled()
     const ffmpegReady = await isFFmpegInstalled()
 
     return {
       mediamtx: mediamtxReady ? 'ready' : 'pending',
-      cloudflared: cloudflaredReady ? 'ready' : 'pending',
       ffmpeg: ffmpegReady ? 'ready' : 'pending',
       message:
-        mediamtxReady && cloudflaredReady && ffmpegReady ? '準備完了' : 'セットアップが必要です'
+        mediamtxReady && ffmpegReady ? '準備完了' : 'セットアップが必要です'
     }
   })
 
@@ -80,7 +73,6 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       if (!mediamtxReady) {
         sendSetupProgress(window, {
           mediamtx: 'downloading',
-          cloudflared: 'pending',
           ffmpeg: 'pending',
           message: 'MediaMTXをダウンロード中...'
         })
@@ -88,7 +80,6 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         await installMediaMTX((msg) => {
           sendSetupProgress(window, {
             mediamtx: 'downloading',
-            cloudflared: 'pending',
             ffmpeg: 'pending',
             message: msg
           })
@@ -97,34 +88,6 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
 
       sendSetupProgress(window, {
         mediamtx: 'ready',
-        cloudflared: 'pending',
-        ffmpeg: 'pending',
-        message: 'cloudflaredをセットアップ中...'
-      })
-
-      // cloudflaredインストール
-      const cloudflaredReady = await isCloudflaredInstalled()
-      if (!cloudflaredReady) {
-        sendSetupProgress(window, {
-          mediamtx: 'ready',
-          cloudflared: 'downloading',
-          ffmpeg: 'pending',
-          message: 'cloudflaredをダウンロード中...'
-        })
-
-        await installCloudflared((msg) => {
-          sendSetupProgress(window, {
-            mediamtx: 'ready',
-            cloudflared: 'downloading',
-            ffmpeg: 'pending',
-            message: msg
-          })
-        })
-      }
-
-      sendSetupProgress(window, {
-        mediamtx: 'ready',
-        cloudflared: 'ready',
         ffmpeg: 'pending',
         message: 'FFmpegをセットアップ中...'
       })
@@ -134,7 +97,6 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       if (!ffmpegReady) {
         sendSetupProgress(window, {
           mediamtx: 'ready',
-          cloudflared: 'ready',
           ffmpeg: 'downloading',
           message: 'FFmpegをダウンロード中...（100MB以上あるため時間がかかります）'
         })
@@ -142,7 +104,6 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         await installFFmpeg((msg) => {
           sendSetupProgress(window, {
             mediamtx: 'ready',
-            cloudflared: 'ready',
             ffmpeg: 'downloading',
             message: msg
           })
@@ -151,7 +112,6 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
 
       sendSetupProgress(window, {
         mediamtx: 'ready',
-        cloudflared: 'ready',
         ffmpeg: 'ready',
         message: 'セットアップ完了'
       })
@@ -159,7 +119,6 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       const errorMessage = error instanceof Error ? error.message : String(error)
       sendSetupProgress(window, {
         mediamtx: 'error',
-        cloudflared: 'error',
         ffmpeg: 'error',
         message: `セットアップ失敗: ${errorMessage}`
       })
@@ -187,27 +146,19 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         throw new Error(`MediaMTXの起動に失敗: ${mediamtxStatus.error}`)
       }
 
-      // Tunnel起動
-      const tunnelStatus = await startTunnel(8888)
-      if (!tunnelStatus.running) {
-        await stopMediaMTX()
-        throw new Error(`Tunnelの起動に失敗: ${tunnelStatus.error}`)
-      }
-
       const info: StreamInfo = {
         status: 'running',
-        rtmpUrl: 'rtmp://localhost:1935/live',
-        hlsUrl: 'http://localhost:8888/live_hls/index.m3u8',
-        publicUrl: getHlsPublicUrl(),
-        readyForPlayback: false,  // まだ準備中
+        rtmpUrl: `rtmp://${RELAY_SERVER_IP}:1935/live`,  // サーバーのRTMPへ送出
+        hlsUrl: null,  // ローカルHLSは使用しない
+        publicUrl: `${RELAY_SERVER_URL}/live/index.m3u8`,  // サーバー経由のHLS
+        readyForPlayback: false,
         error: null
       }
 
       sendStreamStatus(window, info)
 
-      // HLSが再生可能になるまでバックグラウンドでポーリング
+      // サーバー側のHLSが再生可能になるまでバックグラウンドでポーリング
       cancelHlsPolling = pollHlsPlaybackReady(() => {
-        // コールバック時点で最新のウィンドウ参照を取得
         const currentWindow = getMainWindow()
         const readyInfo: StreamInfo = {
           ...currentStreamInfo,
@@ -251,7 +202,6 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       error: null
     })
 
-    await stopTunnel()
     await stopMediaMTX()
 
     sendStreamStatus(window, {
@@ -267,14 +217,13 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
   // 配信状態取得
   ipcMain.handle(IPC_CHANNELS.STREAM_STATUS, async (): Promise<StreamInfo> => {
     const mediamtxStatus = getMediaMTXStatus()
-    const tunnelStatus = getTunnelStatus()
 
-    if (mediamtxStatus.running && tunnelStatus.running) {
+    if (mediamtxStatus.running) {
       return {
         status: 'running',
-        rtmpUrl: 'rtmp://localhost:1935/live',
-        hlsUrl: 'http://localhost:8888/live_hls/index.m3u8',
-        publicUrl: getHlsPublicUrl(),
+        rtmpUrl: `rtmp://${RELAY_SERVER_IP}:1935/live`,
+        hlsUrl: null,
+        publicUrl: `${RELAY_SERVER_URL}/live/index.m3u8`,
         readyForPlayback: currentStreamInfo.readyForPlayback,
         error: null
       }
@@ -334,6 +283,5 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
 
 // クリーンアップ（アプリ終了時に呼ぶ）
 export async function cleanupStreaming(): Promise<void> {
-  await stopTunnel()
   await stopMediaMTX()
 }

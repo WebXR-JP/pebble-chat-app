@@ -1,0 +1,36 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install basic packages
+  apt:
+    name:
+      - curl
+      - wget
+      - unzip
+    state: present
+
+- name: Configure UFW - allow SSH
+  ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Configure UFW - allow HTTP
+  ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: Configure UFW - allow RTMP
+  ufw:
+    rule: allow
+    port: "{{ mediamtx_port_rtmp }}"
+    proto: tcp
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+    policy: deny

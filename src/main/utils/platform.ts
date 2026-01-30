@@ -45,40 +45,6 @@ export function getMediaMTXBinaryName(): string {
   return getPlatform() === 'win32' ? 'mediamtx.exe' : 'mediamtx'
 }
 
-// cloudflaredダウンロードURL生成
-export function getCloudflaredDownloadUrl(version: string): string {
-  const platform = getPlatform()
-  const arch = getArchitecture()
-
-  const platformMap: Record<Platform, string> = {
-    darwin: 'darwin',
-    win32: 'windows',
-    linux: 'linux'
-  }
-
-  const archMap: Record<Architecture, string> = {
-    x64: 'amd64',
-    arm64: 'arm64'
-  }
-
-  const osName = platformMap[platform]
-  const archName = archMap[arch]
-
-  // Windowsはexe、macOSはtgz、Linuxはバイナリ直接
-  if (platform === 'win32') {
-    return `https://github.com/cloudflare/cloudflared/releases/download/${version}/cloudflared-${osName}-${archName}.exe`
-  } else if (platform === 'darwin') {
-    return `https://github.com/cloudflare/cloudflared/releases/download/${version}/cloudflared-${osName}-${archName}.tgz`
-  } else {
-    return `https://github.com/cloudflare/cloudflared/releases/download/${version}/cloudflared-${osName}-${archName}`
-  }
-}
-
-// cloudflaredバイナリ名
-export function getCloudflaredBinaryName(): string {
-  return getPlatform() === 'win32' ? 'cloudflared.exe' : 'cloudflared'
-}
-
 // FFmpegダウンロードURL生成（Windows用のみ、macOS/LinuxはシステムのFFmpegを使用）
 export function getFFmpegDownloadUrl(): string {
   const platform = getPlatform()

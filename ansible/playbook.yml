@@ -1,0 +1,8 @@
+---
+- name: Configure PebbleChat relay server
+  hosts: pebble-relay
+  become: yes
+  roles:
+    - common
+    - mediamtx
+    - caddy

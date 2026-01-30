@@ -198,11 +198,14 @@ export async function checkMediaMTXHealth(): Promise<boolean> {
   }
 }
 
+// リレーサーバー設定
+const RELAY_SERVER_IP = '161.33.189.110'
+
 // HLSエンドポイントが再生可能かチェック（セグメントが生成されているか）
 export async function checkHlsPlaybackReady(): Promise<boolean> {
   try {
-    // GETリクエストで実際にコンテンツを取得（HEADだと正しく動作しないサーバーがある）
-    const response = await fetch('http://localhost:8888/live_hls/index.m3u8', {
+    // リレーサーバーのHLSエンドポイントをチェック
+    const response = await fetch(`http://${RELAY_SERVER_IP}/live/index.m3u8`, {
       method: 'GET'
     })
     // 200 = セグメントが生成されており再生可能

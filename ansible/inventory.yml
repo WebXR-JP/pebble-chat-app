@@ -1,0 +1,6 @@
+all:
+  hosts:
+    pebble-relay:
+      ansible_host: 161.33.189.110
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: ~/.ssh/rsa-pubs/pebble-relay.pub
