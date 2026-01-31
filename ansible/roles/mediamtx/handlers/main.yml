@@ -1,0 +1,6 @@
+---
+- name: Restart MediaMTX
+  systemd:
+    name: mediamtx
+    state: restarted
+    daemon_reload: yes

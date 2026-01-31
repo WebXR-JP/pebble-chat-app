@@ -2,11 +2,27 @@ pebble.xrift.net {
     # HLS配信（MediaMTXからプロキシ）
     reverse_proxy /live/* localhost:{{ mediamtx_port_hls }}
 
+    # MIMEタイプを強制上書き（deferでレスポンス後に適用）
+    @m3u8 path *.m3u8
+    header @m3u8 {
+        Content-Type "application/vnd.apple.mpegurl"
+        defer
+    }
+
+    @ts path *.ts
+    header @ts {
+        Content-Type "video/mp2t"
+        defer
+    }
+
+    # CORS対応（MediaMTXのCredentialsヘッダーを削除）
+    header {
+        -Access-Control-Allow-Credentials
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+        Access-Control-Allow-Headers "*"
+    }
+
     # ヘルスチェック
     respond /health "OK" 200
-
-    # CORS対応
-    header Access-Control-Allow-Origin "*"
-    header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
-    header Access-Control-Allow-Headers "*"
 }

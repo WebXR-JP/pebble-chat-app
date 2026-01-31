@@ -1,0 +1,61 @@
+---
+- name: Create MediaMTX directory
+  file:
+    path: /opt/mediamtx
+    state: directory
+    mode: '0755'
+
+- name: Download MediaMTX
+  get_url:
+    url: "https://github.com/bluenviron/mediamtx/releases/download/v{{ mediamtx_version }}/mediamtx_v{{ mediamtx_version }}_linux_amd64.tar.gz"
+    dest: /tmp/mediamtx.tar.gz
+    mode: '0644'
+
+- name: Extract MediaMTX
+  unarchive:
+    src: /tmp/mediamtx.tar.gz
+    dest: /opt/mediamtx
+    remote_src: yes
+
+- name: Make MediaMTX executable
+  file:
+    path: /opt/mediamtx/mediamtx
+    mode: '0755'
+
+- name: Copy MediaMTX configuration
+  template:
+    src: mediamtx.yml.j2
+    dest: /opt/mediamtx/mediamtx.yml
+    mode: '0644'
+  notify: Restart MediaMTX
+
+- name: Create MediaMTX systemd service
+  copy:
+    dest: /etc/systemd/system/mediamtx.service
+    content: |
+      [Unit]
+      Description=MediaMTX RTMP/HLS Server
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/opt/mediamtx/mediamtx /opt/mediamtx/mediamtx.yml
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  notify: Restart MediaMTX
+
+- name: Enable and start MediaMTX
+  systemd:
+    name: mediamtx
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Clean up downloaded archive
+  file:
+    path: /tmp/mediamtx.tar.gz
+    state: absent
