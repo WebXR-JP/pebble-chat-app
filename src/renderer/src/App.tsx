@@ -11,6 +11,8 @@ import { CaptureSource, Platform } from '../../shared/types'
 type StreamMode = 'direct' | 'obs'
 type AppState = 'idle' | 'selecting' | 'streaming'
 
+const STORAGE_KEY = 'pebble-stream-id'
+
 function App() {
   const setup = useSetup()
   const streaming = useStreaming()
@@ -19,7 +21,9 @@ function App() {
   const [appState, setAppState] = useState<AppState>('idle')
   const [selectedSource, setSelectedSource] = useState<CaptureSource | null>(null)
   const [platform, setPlatform] = useState<Platform | null>(null)
-  const [customStreamId, setCustomStreamId] = useState<string>('')
+  const [customStreamId, setCustomStreamId] = useState<string>(() => {
+    return localStorage.getItem(STORAGE_KEY) || ''
+  })
   const [streamIdError, setStreamIdError] = useState<string | null>(null)
 
   // プラットフォーム取得
@@ -159,8 +163,14 @@ function App() {
                 type="text"
                 value={customStreamId}
                 onChange={(e) => {
-                  setCustomStreamId(e.target.value)
+                  const value = e.target.value
+                  setCustomStreamId(value)
                   setStreamIdError(null)
+                  if (value) {
+                    localStorage.setItem(STORAGE_KEY, value)
+                  } else {
+                    localStorage.removeItem(STORAGE_KEY)
+                  }
                 }}
                 placeholder="空欄でランダム生成"
                 style={{
