@@ -224,13 +224,16 @@ async function removeQuarantine(filePath: string): Promise<void> {
 }
 
 // MediaMTX設定ファイルを生成（リレーサーバーへRTMP送出）
-export async function updateMediaMTXConfig(): Promise<void> {
+export async function updateMediaMTXConfig(streamId?: string): Promise<void> {
   // FFmpegのパスを検出
   const ffmpegPath = getFFmpegPath()
   // Windowsのバックスラッシュをスラッシュに変換（YAMLでエスケープ問題を回避）
   const ffmpegCommand = ffmpegPath ? ffmpegPath.replace(/\\/g, '/') : 'ffmpeg'
 
   console.log('[Binary] FFmpeg path detected:', ffmpegPath || 'not found, using default')
+
+  // ストリームIDが指定されていない場合はデフォルト値を使用
+  const streamPath = streamId || 'live'
 
   const configContent = `
 # MediaMTX Configuration for PebbleChat
@@ -272,7 +275,7 @@ srt: no
 paths:
   live:
     # WebRTC入力後、FFmpegでH.264に変換してリレーサーバーへRTMP送出
-    runOnReady: ${ffmpegCommand} -i rtsp://localhost:8554/live -vf "scale=-2:480" -c:v libx264 -preset ultrafast -tune zerolatency -b:v 1000k -f flv rtmp://${RELAY_SERVER_HOST}:1935/live
+    runOnReady: ${ffmpegCommand} -i rtsp://localhost:8554/live -vf "scale=-2:480" -c:v libx264 -preset ultrafast -tune zerolatency -b:v 1000k -f flv rtmp://${RELAY_SERVER_HOST}:1935/${streamPath}
     runOnReadyRestart: yes
 
   all_others:

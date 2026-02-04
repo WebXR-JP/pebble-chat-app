@@ -33,7 +33,8 @@ interface Props {
 
 export function UrlDisplay({ streamInfo, mode }: Props) {
   const [copied, setCopied] = useState<string | null>(null)
-  const isLoading = streamInfo.status !== 'running' || !streamInfo.publicUrl
+  // 配信準備完了までスケルトン表示
+  const isLoading = !streamInfo.readyForPlayback || !streamInfo.publicUrl
 
   // スケルトンアニメーション用スタイルを注入
   useEffect(() => {

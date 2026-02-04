@@ -23,7 +23,7 @@ export interface MediaMTXStatus {
 }
 
 // MediaMTXを起動
-export async function startMediaMTX(): Promise<MediaMTXStatus> {
+export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> {
   if (mediamtxProcess) {
     return {
       running: true,
@@ -35,9 +35,9 @@ export async function startMediaMTX(): Promise<MediaMTXStatus> {
   // Windowsの場合、既存プロセスを強制終了
   killExistingMediaMTX()
 
-  // 起動前に設定ファイルを再生成（FFmpegパスを最新に）
+  // 起動前に設定ファイルを再生成（ストリームIDを渡す）
   try {
-    await updateMediaMTXConfig()
+    await updateMediaMTXConfig(streamId)
   } catch (error) {
     console.error('[MediaMTX] Failed to update config:', error)
   }
@@ -202,10 +202,10 @@ export async function checkMediaMTXHealth(): Promise<boolean> {
 const RELAY_SERVER_HOST = 'pebble.xrift.net'
 
 // HLSエンドポイントが再生可能かチェック（セグメントが生成されているか）
-export async function checkHlsPlaybackReady(): Promise<boolean> {
+export async function checkHlsPlaybackReady(streamId: string): Promise<boolean> {
   try {
     // リレーサーバーのHLSエンドポイントをチェック
-    const response = await fetch(`https://${RELAY_SERVER_HOST}/live/index.m3u8`, {
+    const response = await fetch(`https://${RELAY_SERVER_HOST}/${streamId}/index.m3u8`, {
       method: 'GET'
     })
     // 200 = セグメントが生成されており再生可能
@@ -218,6 +218,7 @@ export async function checkHlsPlaybackReady(): Promise<boolean> {
 
 // HLSが再生可能になるまでポーリング
 export function pollHlsPlaybackReady(
+  streamId: string,
   onReady: () => void,
   options: { interval?: number; maxAttempts?: number } = {}
 ): () => void {
@@ -230,7 +231,7 @@ export function pollHlsPlaybackReady(
     if (stopped) return
 
     attempts++
-    const isReady = await checkHlsPlaybackReady()
+    const isReady = await checkHlsPlaybackReady(streamId)
 
     if (isReady) {
       console.log('[MediaMTX] HLS playback ready')

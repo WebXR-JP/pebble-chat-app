@@ -1,6 +1,9 @@
 pebble.xrift.net {
-    # HLS配信（MediaMTXからプロキシ）
-    reverse_proxy /live/* localhost:{{ mediamtx_port_hls }}
+    # ヘルスチェック（最初にマッチさせる）
+    respond /health "OK" 200
+
+    # HLS配信（MediaMTXからプロキシ）- 任意のストリームIDに対応
+    reverse_proxy /* localhost:{{ mediamtx_port_hls }}
 
     # MIMEタイプを強制上書き（deferでレスポンス後に適用）
     @m3u8 path *.m3u8
@@ -22,7 +25,4 @@ pebble.xrift.net {
         Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
         Access-Control-Allow-Headers "*"
     }
-
-    # ヘルスチェック
-    respond /health "OK" 200
 }

@@ -10,9 +10,19 @@ import {
   openScreenRecordingSettings
 } from '../services/capture'
 
+import crypto from 'crypto'
+
 // リレーサーバー設定
 const RELAY_SERVER_HOST = 'pebble.xrift.net'
 const RELAY_SERVER_URL = `https://${RELAY_SERVER_HOST}`
+
+// 現在のストリームID
+let currentStreamId: string | null = null
+
+// ランダムなストリームIDを生成（8文字の英数字）
+function generateStreamId(): string {
+  return crypto.randomBytes(4).toString('hex')
+}
 
 let currentStreamInfo: StreamInfo = {
   status: 'idle',
@@ -131,6 +141,10 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
     const window = getMainWindow()
 
     try {
+      // ストリームIDを生成
+      currentStreamId = generateStreamId()
+      console.log('[Streaming] Generated stream ID:', currentStreamId)
+
       sendStreamStatus(window, {
         status: 'starting',
         rtmpUrl: null,
@@ -140,17 +154,17 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         error: null
       })
 
-      // MediaMTX起動
-      const mediamtxStatus = await startMediaMTX()
+      // MediaMTX起動（ストリームIDを渡す）
+      const mediamtxStatus = await startMediaMTX(currentStreamId)
       if (!mediamtxStatus.running) {
         throw new Error(`MediaMTXの起動に失敗: ${mediamtxStatus.error}`)
       }
 
       const info: StreamInfo = {
         status: 'running',
-        rtmpUrl: `rtmp://${RELAY_SERVER_HOST}:1935/live`,  // サーバーのRTMPへ送出
+        rtmpUrl: `rtmp://${RELAY_SERVER_HOST}:1935/${currentStreamId}`,  // サーバーのRTMPへ送出
         hlsUrl: null,  // ローカルHLSは使用しない
-        publicUrl: `${RELAY_SERVER_URL}/live/index.m3u8`,  // サーバー経由のHLS
+        publicUrl: `${RELAY_SERVER_URL}/${currentStreamId}/index.m3u8`,  // サーバー経由のHLS
         readyForPlayback: false,
         error: null
       }
@@ -158,7 +172,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       sendStreamStatus(window, info)
 
       // サーバー側のHLSが再生可能になるまでバックグラウンドでポーリング
-      cancelHlsPolling = pollHlsPlaybackReady(() => {
+      cancelHlsPolling = pollHlsPlaybackReady(currentStreamId, () => {
         const currentWindow = getMainWindow()
         const readyInfo: StreamInfo = {
           ...currentStreamInfo,
@@ -204,6 +218,9 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
 
     await stopMediaMTX()
 
+    // ストリームIDをクリア
+    currentStreamId = null
+
     sendStreamStatus(window, {
       status: 'idle',
       rtmpUrl: null,
@@ -218,12 +235,12 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
   ipcMain.handle(IPC_CHANNELS.STREAM_STATUS, async (): Promise<StreamInfo> => {
     const mediamtxStatus = getMediaMTXStatus()
 
-    if (mediamtxStatus.running) {
+    if (mediamtxStatus.running && currentStreamId) {
       return {
         status: 'running',
-        rtmpUrl: `rtmp://${RELAY_SERVER_HOST}:1935/live`,
+        rtmpUrl: `rtmp://${RELAY_SERVER_HOST}:1935/${currentStreamId}`,
         hlsUrl: null,
-        publicUrl: `${RELAY_SERVER_URL}/live/index.m3u8`,
+        publicUrl: `${RELAY_SERVER_URL}/${currentStreamId}/index.m3u8`,
         readyForPlayback: currentStreamInfo.readyForPlayback,
         error: null
       }
