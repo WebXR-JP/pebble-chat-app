@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { CaptureSource, CaptureInfo, ScreenRecordingPermission } from '../../../shared/types'
 import { WHIPClient } from '../lib/whip'
+import { DEFAULT_CAPTURE_SOURCES, DEFAULT_CAPTURE_INFO } from '../constants/defaults'
 
 interface UseCaptureResult {
   sources: CaptureSource[]
@@ -17,13 +18,8 @@ interface UseCaptureResult {
 }
 
 export function useCapture(): UseCaptureResult {
-  const [sources, setSources] = useState<CaptureSource[]>([])
-  const [captureInfo, setCaptureInfo] = useState<CaptureInfo>({
-    status: 'idle',
-    sourceId: null,
-    sourceName: null,
-    error: null
-  })
+  const [sources, setSources] = useState<CaptureSource[]>(DEFAULT_CAPTURE_SOURCES)
+  const [captureInfo, setCaptureInfo] = useState<CaptureInfo>(DEFAULT_CAPTURE_INFO)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState | null>(null)

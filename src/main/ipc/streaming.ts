@@ -158,9 +158,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       const trimmedId = customStreamId?.trim()
       if (trimmedId) {
         const validation = validateStreamId(trimmedId)
-        if (!validation.valid) {
-          throw new Error(validation.error)
-        }
+        if (!validation.valid) throw new Error(validation.error)
         currentStreamId = trimmedId
         console.log('[Streaming] Using custom stream ID:', currentStreamId)
       } else {

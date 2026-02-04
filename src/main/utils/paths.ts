@@ -39,36 +39,26 @@ export function getTempPath(): string {
   return path.join(getUserDataPath(), 'temp')
 }
 
-// FFmpegのパスを検出（バンドル版を優先）
-export function getFFmpegPath(): string | null {
-  const platform = getPlatform()
-
-  // まずバンドルされたFFmpegをチェック
-  const bundledPath = getBundledFFmpegPath()
-  if (fs.existsSync(bundledPath)) {
-    return bundledPath
-  }
-
-  // 次にwhichコマンドで探す（開発環境では動作するが、パッケージ後は環境変数が異なる可能性がある）
+// whichコマンドでFFmpegを探す
+function findFFmpegByWhich(platform: string): string | null {
   try {
     if (platform === 'win32') {
       const result = execSync('where ffmpeg', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] })
       const firstLine = result.trim().split('\n')[0]
-      if (firstLine && fs.existsSync(firstLine)) {
-        return firstLine
-      }
+      if (firstLine && fs.existsSync(firstLine)) return firstLine
     } else {
       const result = execSync('which ffmpeg', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] })
       const ffmpegPath = result.trim()
-      if (ffmpegPath && fs.existsSync(ffmpegPath)) {
-        return ffmpegPath
-      }
+      if (ffmpegPath && fs.existsSync(ffmpegPath)) return ffmpegPath
     }
   } catch {
-    // whichコマンドが失敗した場合は一般的なパスを探す
+    // whichコマンドが失敗した場合はnullを返す
   }
+  return null
+}
 
-  // 一般的なインストール場所を探す
+// 一般的なインストール場所からFFmpegを探す
+function findFFmpegInCommonPaths(platform: string): string | null {
   const commonPaths: string[] = platform === 'darwin'
     ? [
         '/opt/homebrew/bin/ffmpeg',      // Apple Silicon Homebrew
@@ -93,10 +83,24 @@ export function getFFmpegPath(): string | null {
       ]
 
   for (const ffmpegPath of commonPaths) {
-    if (fs.existsSync(ffmpegPath)) {
-      return ffmpegPath
-    }
+    if (fs.existsSync(ffmpegPath)) return ffmpegPath
   }
 
   return null
+}
+
+// FFmpegのパスを検出（バンドル版を優先）
+export function getFFmpegPath(): string | null {
+  const platform = getPlatform()
+
+  // まずバンドルされたFFmpegをチェック
+  const bundledPath = getBundledFFmpegPath()
+  if (fs.existsSync(bundledPath)) return bundledPath
+
+  // 次にwhichコマンドで探す
+  const whichResult = findFFmpegByWhich(platform)
+  if (whichResult) return whichResult
+
+  // 一般的なインストール場所を探す
+  return findFFmpegInCommonPaths(platform)
 }
