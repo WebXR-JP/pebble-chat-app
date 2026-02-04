@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { StreamInfo } from '../../../shared/types'
+import { DEFAULT_STREAM_INFO } from '../constants/defaults'
 
 interface UseStreamingResult {
   streamInfo: StreamInfo
@@ -11,14 +12,7 @@ interface UseStreamingResult {
 }
 
 export function useStreaming(): UseStreamingResult {
-  const [streamInfo, setStreamInfo] = useState<StreamInfo>({
-    status: 'idle',
-    rtmpUrl: null,
-    hlsUrl: null,
-    publicUrl: null,
-    readyForPlayback: false,
-    error: null
-  })
+  const [streamInfo, setStreamInfo] = useState<StreamInfo>(DEFAULT_STREAM_INFO)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

@@ -1,4 +1,5 @@
 import type { SetupProgress as SetupProgressType } from '../../../shared/types'
+import { getSetupStatusIcon, getSetupStatusColor } from '../utils/formatters'
 
 interface Props {
   progress: SetupProgressType
@@ -8,47 +9,21 @@ interface Props {
 }
 
 export function SetupProgress({ progress, isLoading, error, onInstall }: Props) {
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'ready':
-        return '✓'
-      case 'downloading':
-        return '↓'
-      case 'error':
-        return '✗'
-      default:
-        return '○'
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ready':
-        return '#5D8A66'
-      case 'downloading':
-        return '#8B7355'
-      case 'error':
-        return '#C45C4A'
-      default:
-        return '#9CA3AF'
-    }
-  }
-
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>セットアップ</h2>
 
       <div style={styles.items}>
         <div style={styles.item}>
-          <span style={{ ...styles.icon, color: getStatusColor(progress.mediamtx) }}>
-            {getStatusIcon(progress.mediamtx)}
+          <span style={{ ...styles.icon, color: getSetupStatusColor(progress.mediamtx) }}>
+            {getSetupStatusIcon(progress.mediamtx)}
           </span>
           <span style={styles.label}>MediaMTX</span>
         </div>
 
         <div style={styles.item}>
-          <span style={{ ...styles.icon, color: getStatusColor(progress.ffmpeg) }}>
-            {getStatusIcon(progress.ffmpeg)}
+          <span style={{ ...styles.icon, color: getSetupStatusColor(progress.ffmpeg) }}>
+            {getSetupStatusIcon(progress.ffmpeg)}
           </span>
           <span style={styles.label}>FFmpeg</span>
         </div>

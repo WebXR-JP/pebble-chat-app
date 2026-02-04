@@ -1,5 +1,6 @@
 import { spawn, ChildProcess, execSync } from 'child_process'
 import { getMediaMTXPath, getMediaMTXConfigPath } from '../utils/paths'
+import { isFFmpegInfoMessage } from '../utils/ffmpeg'
 import { updateMediaMTXConfig } from './binary'
 
 let mediamtxProcess: ChildProcess | null = null
@@ -74,39 +75,8 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
     // 注意: FFmpegはバージョン情報などをstderrに出力するため、すべてがエラーではない
     mediamtxProcess.stderr?.on('data', (data: Buffer) => {
       const output = data.toString()
-      // FFmpegのバージョン情報やストリーム情報など、情報的な出力はエラーとして扱わない
-      const isInfoMessage =
-        // FFmpegバージョン情報
-        output.includes('ffmpeg version') ||
-        output.includes('configuration:') ||
-        output.includes('built with') ||
-        // ライブラリバージョン
-        output.includes('libavutil') ||
-        output.includes('libavcodec') ||
-        output.includes('libavformat') ||
-        output.includes('libavdevice') ||
-        output.includes('libavfilter') ||
-        output.includes('libswscale') ||
-        output.includes('libswresample') ||
-        output.includes('libpostproc') ||
-        // ストリーム情報（入力認識時に出力される）
-        output.includes('Input #') ||
-        output.includes('Stream #') ||
-        output.includes('Metadata:') ||
-        output.includes('Duration:') ||
-        output.includes('title') ||
-        // FFmpegインタラクティブメッセージ
-        output.includes('Press [q] to stop') ||
-        // コンテキストログ（rtsp, vp8, vist, libx264等）
-        /\[(rtsp|vp8|vist#[0-9:\/]+|libx264|dec:vp8) @ 0x[0-9a-f]+\]/.test(output) ||
-        // 一時的な警告（キーフレーム待ち、配信開始時に頻発するが正常）
-        output.includes('Keyframe missing') ||
-        output.includes('Discarding interframe without a prior keyframe') ||
-        output.includes('Error submitting packet to decoder') ||
-        // FFmpegエンコード進捗情報
-        /^frame=\s*\d+/.test(output.trim())
 
-      if (isInfoMessage) {
+      if (isFFmpegInfoMessage(output)) {
         console.log('[MediaMTX FFmpeg]', output)
       } else {
         console.error('[MediaMTX Error]', output)

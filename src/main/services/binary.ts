@@ -37,6 +37,61 @@ export async function isFFmpegInstalled(): Promise<boolean> {
   }
 }
 
+// Windows用FFmpegインストール
+async function installFFmpegWindows(
+  tempPath: string,
+  downloadUrl: string,
+  onProgress?: (message: string) => void
+): Promise<void> {
+  const archivePath = path.join(tempPath, 'ffmpeg.zip')
+  await downloadFile(downloadUrl, archivePath)
+
+  onProgress?.('FFmpegを展開中...')
+  await extractZip(archivePath, tempPath)
+
+  // 展開されたディレクトリからffmpeg.exeを探してコピー
+  const extractedDirs = await fsp.readdir(tempPath)
+  const ffmpegDir = extractedDirs.find(d => d.startsWith('ffmpeg-'))
+  if (!ffmpegDir) {
+    throw new Error('FFmpeg展開ディレクトリが見つかりませんでした')
+  }
+
+  const ffmpegExePath = path.join(tempPath, ffmpegDir, 'bin', 'ffmpeg.exe')
+  if (!fs.existsSync(ffmpegExePath)) {
+    throw new Error('FFmpegバイナリが見つかりませんでした')
+  }
+
+  await fsp.copyFile(ffmpegExePath, getBundledFFmpegPath())
+  // 展開したディレクトリを削除
+  await fsp.rm(path.join(tempPath, ffmpegDir), { recursive: true, force: true })
+  // 一時ファイル削除
+  await fsp.rm(archivePath, { force: true })
+}
+
+// macOS用FFmpegインストール
+async function installFFmpegMacOS(
+  binPath: string,
+  tempPath: string,
+  downloadUrl: string,
+  onProgress?: (message: string) => void
+): Promise<void> {
+  const archivePath = path.join(tempPath, 'ffmpeg.zip')
+  await downloadFile(downloadUrl, archivePath)
+
+  onProgress?.('FFmpegを展開中...')
+  await extractZip(archivePath, binPath)
+
+  // Gatekeeper対応
+  onProgress?.('Gatekeeper対応中...')
+  await removeQuarantine(getBundledFFmpegPath())
+
+  // 実行権限付与
+  await fsp.chmod(getBundledFFmpegPath(), 0o755)
+
+  // 一時ファイル削除
+  await fsp.rm(archivePath, { force: true })
+}
+
 // FFmpegをダウンロード・インストール
 export async function installFFmpeg(
   onProgress?: (message: string) => void
@@ -50,7 +105,6 @@ export async function installFFmpeg(
   await fsp.mkdir(tempPath, { recursive: true })
 
   const downloadUrl = getFFmpegDownloadUrl()
-
   if (!downloadUrl) {
     throw new Error('このプラットフォームではFFmpegの自動インストールはサポートされていません')
   }
@@ -58,48 +112,9 @@ export async function installFFmpeg(
   onProgress?.('FFmpegをダウンロード中...（100MB以上あるため時間がかかります）')
 
   if (platform === 'win32') {
-    // Windowsはzipをダウンロードして展開
-    const archivePath = path.join(tempPath, 'ffmpeg.zip')
-    await downloadFile(downloadUrl, archivePath)
-
-    onProgress?.('FFmpegを展開中...')
-    await extractZip(archivePath, tempPath)
-
-    // 展開されたディレクトリからffmpeg.exeを探してコピー
-    const extractedDirs = await fsp.readdir(tempPath)
-    const ffmpegDir = extractedDirs.find(d => d.startsWith('ffmpeg-'))
-    if (ffmpegDir) {
-      const ffmpegExePath = path.join(tempPath, ffmpegDir, 'bin', 'ffmpeg.exe')
-      if (fs.existsSync(ffmpegExePath)) {
-        await fsp.copyFile(ffmpegExePath, getBundledFFmpegPath())
-      } else {
-        throw new Error('FFmpegバイナリが見つかりませんでした')
-      }
-      // 展開したディレクトリを削除
-      await fsp.rm(path.join(tempPath, ffmpegDir), { recursive: true, force: true })
-    } else {
-      throw new Error('FFmpeg展開ディレクトリが見つかりませんでした')
-    }
-
-    // 一時ファイル削除
-    await fsp.rm(archivePath, { force: true })
+    await installFFmpegWindows(tempPath, downloadUrl, onProgress)
   } else if (platform === 'darwin') {
-    // macOSはzipをダウンロード
-    const archivePath = path.join(tempPath, 'ffmpeg.zip')
-    await downloadFile(downloadUrl, archivePath)
-
-    onProgress?.('FFmpegを展開中...')
-    await extractZip(archivePath, binPath)
-
-    // Gatekeeper対応
-    onProgress?.('Gatekeeper対応中...')
-    await removeQuarantine(getBundledFFmpegPath())
-
-    // 実行権限付与
-    await fsp.chmod(getBundledFFmpegPath(), 0o755)
-
-    // 一時ファイル削除
-    await fsp.rm(archivePath, { force: true })
+    await installFFmpegMacOS(binPath, tempPath, downloadUrl, onProgress)
   }
 
   onProgress?.('FFmpegのインストール完了')

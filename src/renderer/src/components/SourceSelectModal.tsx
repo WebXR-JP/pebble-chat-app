@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, MouseEvent } from 'react'
 import { CaptureSource, ScreenRecordingPermission } from '../../../shared/types'
 
 type TabType = 'screen' | 'window'
@@ -35,11 +35,25 @@ export function SourceSelectModal({
     onRefresh()
   }, [])
 
+  // タブ選択ハンドラ
+  const handleSelectScreenTab = useCallback(() => {
+    setActiveTab('screen')
+  }, [])
+
+  const handleSelectWindowTab = useCallback(() => {
+    setActiveTab('window')
+  }, [])
+
+  // モーダルクリック時のイベント伝播停止
+  const handleModalClick = useCallback((e: MouseEvent) => {
+    e.stopPropagation()
+  }, [])
+
   // 権限がない場合は別のUI
   if (needsPermission) {
     return (
       <div style={styles.overlay} onClick={onCancel}>
-        <div style={styles.permissionModal} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.permissionModal} onClick={handleModalClick}>
           <div style={styles.permissionContainer}>
             <div style={styles.permissionIcon}>!</div>
             <h4 style={styles.permissionTitle}>画面収録の権限が必要です</h4>
@@ -67,7 +81,7 @@ export function SourceSelectModal({
 
   return (
     <div style={styles.overlay} onClick={onCancel}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div style={styles.modal} onClick={handleModalClick}>
         <div style={styles.header}>
           <h3 style={styles.title}>キャプチャするソースを選択</h3>
           <button style={styles.refreshButton} onClick={onRefresh} disabled={isLoading}>
@@ -88,7 +102,7 @@ export function SourceSelectModal({
                   ...styles.tab,
                   ...(activeTab === 'screen' ? styles.tabActive : styles.tabInactive)
                 }}
-                onClick={() => setActiveTab('screen')}
+                onClick={handleSelectScreenTab}
               >
                 画面
               </button>
@@ -97,7 +111,7 @@ export function SourceSelectModal({
                   ...styles.tab,
                   ...(activeTab === 'window' ? styles.tabActive : styles.tabInactive)
                 }}
-                onClick={() => setActiveTab('window')}
+                onClick={handleSelectWindowTab}
               >
                 ウィンドウ
               </button>

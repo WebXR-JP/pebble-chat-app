@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, ChangeEvent } from 'react'
 import logoImage from './assets/logo.png'
 import { SetupProgress } from './components/SetupProgress'
 import { UrlDisplay } from './components/UrlDisplay'
@@ -6,6 +6,7 @@ import { SourceSelectModal } from './components/SourceSelectModal'
 import { useSetup } from './hooks/useSetup'
 import { useStreaming } from './hooks/useStreaming'
 import { useCapture } from './hooks/useCapture'
+import { validateStreamId } from './utils/formatters'
 import { CaptureSource, Platform } from '../../shared/types'
 
 type StreamMode = 'direct' | 'obs'
@@ -31,19 +32,26 @@ function App() {
     window.electronAPI.getPlatform().then(setPlatform)
   }, [])
 
-  // ストリームIDのバリデーション
-  const validateStreamId = (id: string): { valid: boolean; error?: string } => {
-    if (!id.trim()) {
-      return { valid: true } // 空欄はOK（ランダム生成される）
+  // ストリームID入力ハンドラ
+  const handleStreamIdChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setCustomStreamId(value)
+    setStreamIdError(null)
+    if (value) {
+      localStorage.setItem(STORAGE_KEY, value)
+    } else {
+      localStorage.removeItem(STORAGE_KEY)
     }
-    if (id.length < 3 || id.length > 20) {
-      return { valid: false, error: 'ストリームIDは3〜20文字で入力してください' }
-    }
-    if (!/^[a-zA-Z0-9-]+$/.test(id)) {
-      return { valid: false, error: 'ストリームIDは英数字とハイフンのみ使用できます' }
-    }
-    return { valid: true }
-  }
+  }, [])
+
+  // 配信モード選択ハンドラ
+  const handleSelectDirectMode = useCallback(() => {
+    setStreamMode('direct')
+  }, [])
+
+  const handleSelectObsMode = useCallback(() => {
+    setStreamMode('obs')
+  }, [])
 
   // 配信開始ボタン押下
   const handleStartClick = () => {
@@ -162,16 +170,7 @@ function App() {
               <input
                 type="text"
                 value={customStreamId}
-                onChange={(e) => {
-                  const value = e.target.value
-                  setCustomStreamId(value)
-                  setStreamIdError(null)
-                  if (value) {
-                    localStorage.setItem(STORAGE_KEY, value)
-                  } else {
-                    localStorage.removeItem(STORAGE_KEY)
-                  }
-                }}
+                onChange={handleStreamIdChange}
                 placeholder="空欄でランダム生成"
                 style={{
                   ...styles.streamIdInput,
@@ -192,7 +191,7 @@ function App() {
                   type="radio"
                   name="streamMode"
                   checked={streamMode === 'direct'}
-                  onChange={() => setStreamMode('direct')}
+                  onChange={handleSelectDirectMode}
                 />
                 <div style={styles.modeContent}>
                   <span style={styles.modeName}>直接配信</span>
@@ -204,7 +203,7 @@ function App() {
                   type="radio"
                   name="streamMode"
                   checked={streamMode === 'obs'}
-                  onChange={() => setStreamMode('obs')}
+                  onChange={handleSelectObsMode}
                 />
                 <div style={styles.modeContent}>
                   <span style={styles.modeName}>OBS経由</span>

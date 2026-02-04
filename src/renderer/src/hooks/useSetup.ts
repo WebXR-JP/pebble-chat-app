@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { SetupProgress } from '../../../shared/types'
+import { DEFAULT_SETUP_PROGRESS } from '../constants/defaults'
 
 interface UseSetupResult {
   progress: SetupProgress
@@ -10,11 +11,7 @@ interface UseSetupResult {
 }
 
 export function useSetup(): UseSetupResult {
-  const [progress, setProgress] = useState<SetupProgress>({
-    mediamtx: 'pending',
-    ffmpeg: 'pending',
-    message: '確認中...'
-  })
+  const [progress, setProgress] = useState<SetupProgress>(DEFAULT_SETUP_PROGRESS)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

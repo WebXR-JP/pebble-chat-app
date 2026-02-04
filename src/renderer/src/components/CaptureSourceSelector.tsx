@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { CaptureSource } from '../../../shared/types'
+import { getConnectionStateText } from '../utils/formatters'
 
 interface Props {
   sources: CaptureSource[]
@@ -29,23 +30,14 @@ export function CaptureSourceSelector({
     onRefresh()
   }, [])
 
-  const getConnectionStateText = () => {
-    if (!connectionState) return null
-    switch (connectionState) {
-      case 'connecting':
-        return '接続中...'
-      case 'connected':
-        return '配信中'
-      case 'disconnected':
-        return '切断'
-      case 'failed':
-        return '接続失敗'
-      default:
-        return connectionState
-    }
-  }
+  const connectionStateText = getConnectionStateText(connectionState)
 
-  const connectionStateText = getConnectionStateText()
+  // ソースクリックハンドラ
+  const handleSourceClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (isCapturing) return
+    const sourceId = e.currentTarget.dataset.sourceId
+    if (sourceId) onSelect(sourceId)
+  }, [isCapturing, onSelect])
 
   return (
     <div style={styles.container}>
@@ -81,12 +73,13 @@ export function CaptureSourceSelector({
           sources.map((source) => (
             <div
               key={source.id}
+              data-source-id={source.id}
               style={{
                 ...styles.sourceItem,
                 borderColor: source.id === selectedSourceId ? '#2196f3' : '#ddd',
                 opacity: isCapturing && source.id !== selectedSourceId ? 0.5 : 1
               }}
-              onClick={() => !isCapturing && onSelect(source.id)}
+              onClick={handleSourceClick}
             >
               {source.thumbnail ? (
                 <img

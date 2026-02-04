@@ -1,3 +1,5 @@
+import { getStreamButtonText } from '../utils/formatters'
+
 interface Props {
   isStreaming: boolean
   isLoading: boolean
@@ -7,13 +9,6 @@ interface Props {
 }
 
 export function StreamControls({ isStreaming, isLoading, isReady, onStart, onStop }: Props) {
-  const getButtonText = () => {
-    if (isLoading) {
-      return isStreaming ? '停止中...' : '開始中...'
-    }
-    return isStreaming ? '配信停止' : '配信開始'
-  }
-
   return (
     <div style={styles.container}>
       <button
@@ -25,7 +20,7 @@ export function StreamControls({ isStreaming, isLoading, isReady, onStart, onSto
         onClick={isStreaming ? onStop : onStart}
         disabled={!isReady || isLoading}
       >
-        {getButtonText()}
+        {getStreamButtonText(isLoading, isStreaming)}
       </button>
 
       {!isReady && <p style={styles.hint}>セットアップを完了してください</p>}
