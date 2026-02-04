@@ -200,7 +200,7 @@ function App() {
                     ? streaming.streamInfo.readyForPlayback
                       ? '配信中'
                       : '準備中...'
-                    : streaming.isStreaming
+                    : streamMode === 'obs' && streaming.isStreaming
                       ? 'OBS接続待ち'
                       : '接続中...'}
                 </span>
