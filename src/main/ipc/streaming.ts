@@ -9,8 +9,7 @@ import {
   getCaptureStatus,
   openScreenRecordingSettings
 } from '../services/capture'
-
-import crypto from 'crypto'
+import { generateStreamId, validateStreamId } from '../utils/streaming'
 
 // リレーサーバー設定
 const RELAY_SERVER_HOST = 'pebble.xrift.net'
@@ -18,24 +17,6 @@ const RELAY_SERVER_URL = `https://${RELAY_SERVER_HOST}`
 
 // 現在のストリームID
 let currentStreamId: string | null = null
-
-// ランダムなストリームIDを生成（8文字の英数字）
-function generateStreamId(): string {
-  return crypto.randomBytes(4).toString('hex')
-}
-
-// ストリームIDのバリデーション
-function validateStreamId(streamId: string): { valid: boolean; error?: string } {
-  // 長さチェック（3〜20文字）
-  if (streamId.length < 3 || streamId.length > 20) {
-    return { valid: false, error: 'ストリームIDは3〜20文字で入力してください' }
-  }
-  // 英数字とハイフンのみ許可
-  if (!/^[a-zA-Z0-9-]+$/.test(streamId)) {
-    return { valid: false, error: 'ストリームIDは英数字とハイフンのみ使用できます' }
-  }
-  return { valid: true }
-}
 
 let currentStreamInfo: StreamInfo = {
   status: 'idle',
