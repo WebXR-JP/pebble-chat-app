@@ -259,7 +259,7 @@ webrtcAddress: :8889
 hls: yes
 hlsAddress: :8888
 hlsVariant: mpegts
-hlsSegmentCount: 2
+hlsSegmentCount: 3
 hlsSegmentDuration: 1s
 hlsPartDuration: 200ms
 hlsAllowOrigin: '*'
