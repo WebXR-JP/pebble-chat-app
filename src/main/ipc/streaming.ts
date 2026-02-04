@@ -24,6 +24,19 @@ function generateStreamId(): string {
   return crypto.randomBytes(4).toString('hex')
 }
 
+// ストリームIDのバリデーション
+function validateStreamId(streamId: string): { valid: boolean; error?: string } {
+  // 長さチェック（3〜20文字）
+  if (streamId.length < 3 || streamId.length > 20) {
+    return { valid: false, error: 'ストリームIDは3〜20文字で入力してください' }
+  }
+  // 英数字とハイフンのみ許可
+  if (!/^[a-zA-Z0-9-]+$/.test(streamId)) {
+    return { valid: false, error: 'ストリームIDは英数字とハイフンのみ使用できます' }
+  }
+  return { valid: true }
+}
+
 let currentStreamInfo: StreamInfo = {
   status: 'idle',
   rtmpUrl: null,
@@ -137,13 +150,23 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
   })
 
   // 配信開始
-  ipcMain.handle(IPC_CHANNELS.STREAM_START, async (): Promise<StreamInfo> => {
+  ipcMain.handle(IPC_CHANNELS.STREAM_START, async (_event, customStreamId?: string): Promise<StreamInfo> => {
     const window = getMainWindow()
 
     try {
-      // ストリームIDを生成
-      currentStreamId = generateStreamId()
-      console.log('[Streaming] Generated stream ID:', currentStreamId)
+      // カスタムIDがあればバリデーション、なければランダム生成
+      const trimmedId = customStreamId?.trim()
+      if (trimmedId) {
+        const validation = validateStreamId(trimmedId)
+        if (!validation.valid) {
+          throw new Error(validation.error)
+        }
+        currentStreamId = trimmedId
+        console.log('[Streaming] Using custom stream ID:', currentStreamId)
+      } else {
+        currentStreamId = generateStreamId()
+        console.log('[Streaming] Generated stream ID:', currentStreamId)
+      }
 
       sendStreamStatus(window, {
         status: 'starting',

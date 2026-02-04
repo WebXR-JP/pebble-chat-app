@@ -97,7 +97,7 @@ export interface ElectronAPI {
   onSetupProgress: (callback: (progress: SetupProgress) => void) => () => void
 
   // 配信
-  startStream: () => Promise<StreamInfo>
+  startStream: (streamId?: string) => Promise<StreamInfo>
   stopStream: () => Promise<void>
   onStreamStatus: (callback: (info: StreamInfo) => void) => () => void
   getStreamStatus: () => Promise<StreamInfo>

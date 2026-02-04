@@ -17,14 +17,30 @@ PebbleChat は VRChat 向けの配信アプリです。Electronベースのデ�
 ## アーキテクチャ
 
 ```
-PC (H.264/360p) ─── RTMP ───→ Oracle Cloud ───→ Internet
-       │                            │
-       └─ MediaMTX (エンコード)       ├─ MediaMTX (HLSパッケージのみ)
-                                    └─ Caddy (HTTPプロキシ)
+PC (H.264/480p/1Mbps) ─── RTMP ───→ Oracle Cloud ───→ Internet
+       │                                  │
+       └─ MediaMTX (エンコード)             ├─ MediaMTX (HLSパッケージのみ)
+                                          └─ Caddy (HTTPプロキシ)
 ```
 
 - **PC側**: キャプチャ + H.264エンコード（MediaMTX）→ RTMP送出
 - **サーバー側**: RTMP受信 + HLSパッケージング（再エンコードなし、低負荷）
+
+## 配信仕様
+
+| 項目 | 値 |
+|-----|---|
+| コーデック | H.264 + AAC |
+| 解像度 | 480p |
+| ビットレート | 1Mbps |
+| 遅延 | 約4秒（HLS） |
+| HLSセグメント | 1秒間隔、3セグメント保持 |
+
+## ストリームID
+
+- 配信URLは `https://pebble.xrift.net/{streamId}/index.m3u8` の形式
+- **ランダム生成**: 空欄の場合、8文字の16進数を自動生成
+- **カスタムID**: ユーザーが任意に設定可能（英数字とハイフン、3〜20文字）
 
 ## リレーサーバー情報
 
@@ -61,15 +77,17 @@ ssh ubuntu@161.33.189.110
 ### HLS URL
 
 ```
-https://pebble.xrift.net/live/index.m3u8
+https://pebble.xrift.net/{streamId}/index.m3u8
 ```
+
+例: `https://pebble.xrift.net/a1b2c3d4/index.m3u8`
 
 ## 主要ライブラリ
 
 ```json
 {
-  "electron": "^28.0.0",
-  "react": "^18.0.0"
+  "electron": "^31.0.0",
+  "react": "^18.3.1"
 }
 ```
 

@@ -12,9 +12,9 @@ function createWindow(): void {
 
   mainWindow = new BrowserWindow({
     width: 480,
-    height: 540,
+    height: 600,
     minWidth: 400,
-    minHeight: 440,
+    minHeight: 500,
     show: false,
     autoHideMenuBar: true,
     // macOS: hiddenInset（信号機ボタンを残す）

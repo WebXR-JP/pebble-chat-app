@@ -19,14 +19,38 @@ function App() {
   const [appState, setAppState] = useState<AppState>('idle')
   const [selectedSource, setSelectedSource] = useState<CaptureSource | null>(null)
   const [platform, setPlatform] = useState<Platform | null>(null)
+  const [customStreamId, setCustomStreamId] = useState<string>('')
+  const [streamIdError, setStreamIdError] = useState<string | null>(null)
 
   // プラットフォーム取得
   useEffect(() => {
     window.electronAPI.getPlatform().then(setPlatform)
   }, [])
 
+  // ストリームIDのバリデーション
+  const validateStreamId = (id: string): { valid: boolean; error?: string } => {
+    if (!id.trim()) {
+      return { valid: true } // 空欄はOK（ランダム生成される）
+    }
+    if (id.length < 3 || id.length > 20) {
+      return { valid: false, error: 'ストリームIDは3〜20文字で入力してください' }
+    }
+    if (!/^[a-zA-Z0-9-]+$/.test(id)) {
+      return { valid: false, error: 'ストリームIDは英数字とハイフンのみ使用できます' }
+    }
+    return { valid: true }
+  }
+
   // 配信開始ボタン押下
   const handleStartClick = () => {
+    // バリデーション
+    const validation = validateStreamId(customStreamId)
+    if (!validation.valid) {
+      setStreamIdError(validation.error || null)
+      return
+    }
+    setStreamIdError(null)
+
     if (streamMode === 'direct') {
       setAppState('selecting')
     } else {
@@ -41,9 +65,9 @@ function App() {
     setSelectedSource(source || null)
     setAppState('streaming')
 
-    // サーバー起動
+    // サーバー起動（カスタムストリームIDを渡す）
     if (!streaming.isStreaming) {
-      await streaming.startStream()
+      await streaming.startStream(customStreamId.trim() || undefined)
     }
 
     // キャプチャ開始
@@ -68,7 +92,7 @@ function App() {
   // OBS経由で開始
   const handleStartObs = async () => {
     setAppState('streaming')
-    await streaming.startStream()
+    await streaming.startStream(customStreamId.trim() || undefined)
   }
 
   // 配信中かどうか
@@ -128,11 +152,27 @@ function App() {
         {/* 待機画面 */}
         {setup.isReady && appState === 'idle' && (
           <div style={styles.idleScreen}>
-            {/* 注意書き */}
-            <div style={styles.notice}>
-              <span style={styles.noticeText}>
-                無料サービスのため、配信の開始/停止を短時間に繰り返すと一時的に制限がかかる場合があります
-              </span>
+            {/* ストリームID入力 */}
+            <div style={styles.streamIdSection}>
+              <label style={styles.streamIdLabel}>ストリームID（任意）</label>
+              <input
+                type="text"
+                value={customStreamId}
+                onChange={(e) => {
+                  setCustomStreamId(e.target.value)
+                  setStreamIdError(null)
+                }}
+                placeholder="空欄でランダム生成"
+                style={{
+                  ...styles.streamIdInput,
+                  ...(streamIdError ? styles.streamIdInputError : {})
+                }}
+              />
+              {streamIdError ? (
+                <span style={styles.streamIdErrorText}>{streamIdError}</span>
+              ) : (
+                <span style={styles.streamIdHint}>英数字とハイフンのみ、3〜20文字</span>
+              )}
             </div>
 
             {/* 配信モード選択 */}
@@ -232,6 +272,13 @@ function App() {
 
             {/* URL表示 */}
             <UrlDisplay streamInfo={streaming.streamInfo} mode={streamMode} />
+
+            {/* 注意書き */}
+            <div style={styles.notice}>
+              <span style={styles.noticeText}>
+                無料サーバーで運用中のため、遅延4秒以上・画質480pでの配信となります
+              </span>
+            </div>
 
             {/* 停止/接続中ボタン */}
             {isLoading && !capture.isCapturing && !streaming.isStreaming ? (
@@ -409,6 +456,37 @@ const styles: { [key: string]: React.CSSProperties } = {
   modeDesc: {
     fontSize: '12px',
     color: colors.textSecondary
+  },
+  streamIdSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px'
+  },
+  streamIdLabel: {
+    fontSize: '13px',
+    fontWeight: 500,
+    color: colors.textSecondary
+  },
+  streamIdInput: {
+    padding: '12px 14px',
+    fontSize: '14px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '10px',
+    backgroundColor: colors.white,
+    color: colors.textPrimary,
+    outline: 'none',
+    transition: 'border-color 0.2s ease'
+  },
+  streamIdInputError: {
+    borderColor: colors.error
+  },
+  streamIdHint: {
+    fontSize: '11px',
+    color: colors.textMuted
+  },
+  streamIdErrorText: {
+    fontSize: '11px',
+    color: colors.error
   },
   startButton: {
     padding: '16px 32px',

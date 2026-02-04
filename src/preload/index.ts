@@ -17,7 +17,7 @@ const electronAPI: ElectronAPI = {
   },
 
   // 配信
-  startStream: () => ipcRenderer.invoke(IPC_CHANNELS.STREAM_START),
+  startStream: (streamId?: string) => ipcRenderer.invoke(IPC_CHANNELS.STREAM_START, streamId),
 
   stopStream: () => ipcRenderer.invoke(IPC_CHANNELS.STREAM_STOP),
 

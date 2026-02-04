@@ -124,7 +124,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '18px',
     backgroundColor: colors.white,
     borderRadius: '14px',
-    marginBottom: '16px',
+    marginBottom: '0',
     border: `1px solid ${colors.border}`,
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
   },

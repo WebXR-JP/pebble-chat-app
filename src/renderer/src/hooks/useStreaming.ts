@@ -6,7 +6,7 @@ interface UseStreamingResult {
   isStreaming: boolean
   isLoading: boolean
   error: string | null
-  startStream: () => Promise<void>
+  startStream: (streamId?: string) => Promise<void>
   stopStream: () => Promise<void>
 }
 
@@ -52,11 +52,11 @@ export function useStreaming(): UseStreamingResult {
   }, [])
 
   // 配信開始
-  const startStream = useCallback(async () => {
+  const startStream = useCallback(async (streamId?: string) => {
     setIsLoading(true)
     setError(null)
     try {
-      await window.electronAPI.startStream()
+      await window.electronAPI.startStream(streamId)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
       setIsLoading(false)
