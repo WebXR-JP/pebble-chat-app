@@ -6,7 +6,8 @@ import {
   getStreamStatusText,
   getStreamStatusColor,
   getConnectionStateText,
-  getStreamButtonText
+  getStreamButtonText,
+  parseRtmpUrl
 } from '../formatters'
 
 describe('validateStreamId', () => {
@@ -184,5 +185,31 @@ describe('getStreamButtonText', () => {
 
   it('isLoading=false, isStreaming=false は 配信開始 を返す', () => {
     expect(getStreamButtonText(false, false)).toBe('配信開始')
+  })
+})
+
+describe('parseRtmpUrl', () => {
+  it('標準的なRTMP URLをサーバーURLとストリームキーに分割する', () => {
+    const result = parseRtmpUrl('rtmp://pebble.xrift.net:1935/mystream')
+    expect(result).toEqual({
+      serverUrl: 'rtmp://pebble.xrift.net:1935',
+      streamKey: 'mystream'
+    })
+  })
+
+  it('ストリームキーにハイフンを含むURLを分割する', () => {
+    const result = parseRtmpUrl('rtmp://pebble.xrift.net:1935/a1b2c3d4')
+    expect(result).toEqual({
+      serverUrl: 'rtmp://pebble.xrift.net:1935',
+      streamKey: 'a1b2c3d4'
+    })
+  })
+
+  it('スラッシュが無いURLはnullを返す', () => {
+    expect(parseRtmpUrl('invalid')).toBeNull()
+  })
+
+  it('末尾がスラッシュのURLはnullを返す', () => {
+    expect(parseRtmpUrl('rtmp://pebble.xrift.net:1935/')).toBeNull()
   })
 })

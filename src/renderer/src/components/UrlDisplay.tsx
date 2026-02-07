@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { StreamInfo } from '../../../shared/types'
 
 // スケルトンアニメーション用のスタイルを動的に追加
@@ -28,24 +28,31 @@ function injectSkeletonStyle() {
 
 interface Props {
   streamInfo: StreamInfo
-  mode: 'direct' | 'obs'
 }
 
-export function UrlDisplay({ streamInfo, mode }: Props) {
+export function UrlDisplay({ streamInfo }: Props) {
   const [copied, setCopied] = useState<string | null>(null)
-  // 配信準備完了までスケルトン表示
   const isLoading = !streamInfo.readyForPlayback || !streamInfo.publicUrl
 
-  // スケルトンアニメーション用スタイルを注入
   useEffect(() => {
     injectSkeletonStyle()
   }, [])
 
-  // スケルトン表示
+  const handleCopyPublicUrl = useCallback(async () => {
+    if (!streamInfo.publicUrl) return
+    try {
+      await navigator.clipboard.writeText(streamInfo.publicUrl)
+      setCopied('public')
+      setTimeout(() => setCopied(null), 2000)
+    } catch {
+      // コピー失敗は無視
+    }
+  }, [streamInfo.publicUrl])
+
   if (isLoading) {
     return (
       <div style={styles.container}>
-        <h3 style={styles.title}>配信URL</h3>
+        <h3 style={styles.title}>公開URL</h3>
         <div style={styles.section}>
           <div style={styles.skeletonLabel} className="skeleton-shimmer" />
           <div style={styles.skeletonUrl} className="skeleton-shimmer" />
@@ -54,52 +61,19 @@ export function UrlDisplay({ streamInfo, mode }: Props) {
     )
   }
 
-  const copyToClipboard = async (text: string, key: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(key)
-      setTimeout(() => setCopied(null), 2000)
-    } catch {
-      // コピー失敗は無視
-    }
-  }
-
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}>配信URL</h3>
+      <h3 style={styles.title}>公開URL</h3>
 
-      {/* OBS設定（OBS経由モードのみ表示） */}
-      {mode === 'obs' && (
-        <div style={styles.section}>
-          <label style={styles.label}>OBS RTMP URL:</label>
-          <div style={styles.urlRow}>
-            <code style={styles.url}>{streamInfo.rtmpUrl}</code>
-            <button
-              style={styles.copyButton}
-              onClick={() => copyToClipboard(streamInfo.rtmpUrl!, 'rtmp')}
-            >
-              {copied === 'rtmp' ? 'コピーしました' : 'コピー'}
-            </button>
-          </div>
+      <div style={styles.section}>
+        <label style={styles.label}>公開URL (iwaSync用):</label>
+        <div style={styles.urlRow}>
+          <code style={styles.url}>{streamInfo.publicUrl}</code>
+          <button style={styles.copyButton} onClick={handleCopyPublicUrl}>
+            {copied === 'public' ? 'コピー済み' : 'コピー'}
+          </button>
         </div>
-      )}
-
-      {/* 公開URL */}
-      {streamInfo.publicUrl && (
-        <div style={styles.section}>
-          <label style={styles.label}>公開URL (iwaSync用):</label>
-          <div style={styles.urlRow}>
-            <code style={styles.url}>{streamInfo.publicUrl}</code>
-            <button
-              style={styles.copyButton}
-              onClick={() => copyToClipboard(streamInfo.publicUrl!, 'public')}
-            >
-              {copied === 'public' ? 'コピーしました' : 'コピー'}
-            </button>
-          </div>
-        </div>
-      )}
-
+      </div>
     </div>
   )
 }
@@ -107,14 +81,10 @@ export function UrlDisplay({ streamInfo, mode }: Props) {
 // Pebble（石ころ）カラーパレット
 const colors = {
   bgPrimary: '#F7F6F3',
-  bgSecondary: '#EDEAE5',
   accent: '#8B7355',
   accentLight: '#A89076',
-  success: '#5D8A66',
-  successBg: '#E8F0EA',
   textPrimary: '#3D3D3D',
   textSecondary: '#6B6B6B',
-  textMuted: '#9B9B9B',
   white: '#FFFFFF',
   border: '#E0DDD8',
 }
@@ -160,17 +130,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     wordBreak: 'break-all',
     fontFamily: 'SF Mono, Monaco, Consolas, monospace',
     color: colors.textPrimary,
-    border: `1px solid ${colors.border}`
-  },
-  urlSmall: {
-    flex: 1,
-    padding: '8px 10px',
-    backgroundColor: colors.bgPrimary,
-    borderRadius: '8px',
-    fontSize: '11px',
-    color: colors.textMuted,
-    wordBreak: 'break-all',
-    fontFamily: 'SF Mono, Monaco, Consolas, monospace',
     border: `1px solid ${colors.border}`
   },
   copyButton: {

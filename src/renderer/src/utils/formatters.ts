@@ -105,3 +105,22 @@ export function getStreamButtonText(isLoading: boolean, isStreaming: boolean): s
   }
   return isStreaming ? '配信停止' : '配信開始'
 }
+
+// RTMP URL分割結果
+export interface RtmpUrlParts {
+  serverUrl: string
+  streamKey: string
+}
+
+// RTMP URLをサーバーURLとストリームキーに分割する
+// 例: "rtmp://pebble.xrift.net:1935/mystream" → { serverUrl: "rtmp://pebble.xrift.net:1935", streamKey: "mystream" }
+export function parseRtmpUrl(rtmpUrl: string): RtmpUrlParts | null {
+  const lastSlash = rtmpUrl.lastIndexOf('/')
+  if (lastSlash <= 0) return null
+
+  const serverUrl = rtmpUrl.substring(0, lastSlash)
+  const streamKey = rtmpUrl.substring(lastSlash + 1)
+  if (!serverUrl || !streamKey) return null
+
+  return { serverUrl, streamKey }
+}
