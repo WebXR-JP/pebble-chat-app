@@ -147,7 +147,7 @@ function App() {
           paddingTop: platform === 'win32' ? '8px' : '32px'
         }}>
           <img src={logoImage} alt="PebbleChat" style={styles.logo} />
-          <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ</p>
+          <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ <span style={styles.version}>v{__APP_VERSION__}</span></p>
         </header>
       )}
 
@@ -346,6 +346,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '13px',
     color: colors.textSecondary,
     fontWeight: 500
+  },
+  version: {
+    color: colors.textMuted,
+    fontWeight: 400
   },
   main: {
     flex: 1,
