@@ -18,7 +18,8 @@
     "typecheck:renderer": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:main && npm run typecheck:preload && npm run typecheck:renderer",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "pack:booth": "npm run build:mac && npm run build:win && node scripts/pack-booth.mjs"
   },
   "dependencies": {
     "cloudflared": "^0.7.1",
