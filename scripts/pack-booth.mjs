@@ -1,8 +1,8 @@
 /**
- * Booth アップロード用に dist/ のビルド済みディレクトリを zip に圧縮するスクリプト
+ * Booth アップロード用に dist/ のインストーラーを zip に圧縮するスクリプト
  * 使い方: npm run pack:booth
  */
-import { readFileSync, mkdirSync, existsSync, rmSync } from 'node:fs'
+import { readFileSync, mkdirSync, existsSync, rmSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { execSync } from 'node:child_process'
 
@@ -13,11 +13,11 @@ const pkg = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf-8'))
 const version = pkg.version
 const name = pkg.productName || 'PebbleChat'
 
-// zip にするターゲット: [ディレクトリ名, 出力ファイル名]
+// zip にするターゲット: [元ファイル名, 出力 zip 名]
 const targets = [
-  ['mac-arm64', `${name}-${version}-mac-arm64.zip`],
-  ['mac', `${name}-${version}-mac-x64.zip`],
-  ['win-unpacked', `${name}-${version}-win-x64.zip`],
+  [`${name}-${version}-arm64.dmg`, `${name}-${version}-mac-arm64.zip`],
+  [`${name}-${version}.dmg`, `${name}-${version}-mac-x64.zip`],
+  [`${name} Setup ${version}.exe`, `${name}-${version}-win-x64.zip`],
 ]
 
 if (!existsSync(distDir)) {
@@ -34,21 +34,21 @@ mkdirSync(boothDir, { recursive: true })
 console.log(`\nBooth 用 zip を作成します (v${version})\n`)
 
 let count = 0
-for (const [dir, zipName] of targets) {
-  const srcDir = join(distDir, dir)
-  if (!existsSync(srcDir)) {
-    console.log(`  [skip] ${dir}/ が見つかりません`)
+for (const [srcFile, zipName] of targets) {
+  const srcPath = join(distDir, srcFile)
+  if (!existsSync(srcPath)) {
+    console.log(`  [skip] ${srcFile} が見つかりません`)
     continue
   }
 
   const zipPath = join(boothDir, zipName)
-  execSync(`cd "${srcDir}" && zip -r -q "${zipPath}" .`)
+  execSync(`cd "${distDir}" && zip -j -q "${zipPath}" "${srcFile}"`)
   console.log(`  -> ${zipName}`)
   count++
 }
 
 if (count === 0) {
-  console.error('\nzip にできるディレクトリが見つかりませんでした。ビルドを実行してください。')
+  console.error('\nzip にできるファイルが見つかりませんでした。ビルドを実行してください。')
   process.exit(1)
 }
 
