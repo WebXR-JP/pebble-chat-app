@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/electron/main'
 import { spawn, ChildProcess, execSync } from 'child_process'
 import { getMediaMTXPath, getMediaMTXConfigPath } from '../utils/paths'
 import { isFFmpegInfoMessage } from '../utils/ffmpeg'
@@ -80,6 +81,7 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
         console.log('[MediaMTX FFmpeg]', output)
       } else {
         console.error('[MediaMTX Error]', output)
+        Sentry.captureMessage(`MediaMTX stderr: ${output.trim()}`, 'error')
         startupError = output
       }
     })
@@ -211,6 +213,7 @@ export function pollHlsPlaybackReady(
 
     if (attempts >= maxAttempts) {
       console.log('[MediaMTX] HLS playback check timed out')
+      Sentry.captureMessage(`HLS playback check timed out after ${maxAttempts} attempts (streamId: ${streamId})`, 'warning')
       return
     }
 
