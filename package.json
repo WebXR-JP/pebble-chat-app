@@ -1,6 +1,6 @@
 {
   "name": "pebble-chat",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "VRChat向けの簡単配信アプリ - PebbleChat",
   "main": "./out/main/index.js",
   "author": "WebXR-JP",
