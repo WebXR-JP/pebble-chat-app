@@ -99,8 +99,18 @@ describe('isFFmpegInfoMessage', () => {
       expect(isFFmpegInfoMessage('[vist#0:0/0 @ 0x7f8b1c000000] some message')).toBe(true)
     })
 
-    it('flv コンテキストログは情報メッセージ', () => {
+    it('flv の未知のエラーはエラーとして判定', () => {
+      expect(isFFmpegInfoMessage('[flv @ 0xae4c30500] Unknown error')).toBe(false)
+    })
+  })
+
+  describe('FLVヘッダー警告', () => {
+    it('Failed to update header with correct duration は情報メッセージ', () => {
       expect(isFFmpegInfoMessage('[flv @ 0xae4c30500] Failed to update header with correct duration.')).toBe(true)
+    })
+
+    it('Failed to update header with correct filesize は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('[flv @ 0xae4c30500] Failed to update header with correct filesize.')).toBe(true)
     })
   })
 
