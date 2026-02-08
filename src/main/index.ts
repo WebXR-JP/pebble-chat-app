@@ -1,3 +1,9 @@
+import * as Sentry from '@sentry/electron/main'
+
+Sentry.init({
+  dsn: 'https://1b47ed3f1b7b46a0e88cf91ec7d339d1@o256162.ingest.us.sentry.io/4510849611595776'
+})
+
 import { app, shell, BrowserWindow, session, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -66,7 +72,7 @@ app.whenReady().then(() => {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:"
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:* ws://localhost:* https://*.ingest.us.sentry.io; img-src 'self' data:"
         ]
       }
     })

@@ -60,7 +60,10 @@ export class WHIPClient {
     const response = await this.sendOfferWithRetry(localDescription.sdp!)
 
     // リソースURLを保存（後で削除に使用）
-    this.resourceUrl = response.headers.get('Location') || WHIP_ENDPOINT
+    // Location ヘッダーは相対パス（例: /live/whip/xxx）で返るため、
+    // WHIP_ENDPOINT を基準に絶対URLへ解決する
+    const location = response.headers.get('Location')
+    this.resourceUrl = location ? new URL(location, WHIP_ENDPOINT).href : WHIP_ENDPOINT
 
     // Answer SDPを設定
     const answerSdp = await response.text()
