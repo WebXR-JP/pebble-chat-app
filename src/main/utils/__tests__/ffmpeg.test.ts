@@ -98,6 +98,10 @@ describe('isFFmpegInfoMessage', () => {
     it('vist# コンテキストログは情報メッセージ', () => {
       expect(isFFmpegInfoMessage('[vist#0:0/0 @ 0x7f8b1c000000] some message')).toBe(true)
     })
+
+    it('flv コンテキストログは情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('[flv @ 0xae4c30500] Failed to update header with correct duration.')).toBe(true)
+    })
   })
 
   describe('一時的な警告', () => {
