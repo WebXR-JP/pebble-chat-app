@@ -1,6 +1,16 @@
 // 配信状態
 export type StreamStatus = 'idle' | 'starting' | 'running' | 'stopping' | 'error'
 
+// パイプライン各段階のステータス
+export type PipelineStageStatus = 'pending' | 'running' | 'connected' | 'ready' | 'error' | 'timeout'
+
+// パイプラインステータス
+export interface PipelineStatus {
+  mediamtx: PipelineStageStatus
+  rtmp: PipelineStageStatus
+  hls: PipelineStageStatus
+}
+
 // キャプチャソース
 export interface CaptureSource {
   id: string
@@ -47,6 +57,7 @@ export interface StreamInfo {
   publicUrl: string | null
   readyForPlayback: boolean  // HLSエンドポイントが実際に再生可能かどうか
   error: string | null
+  pipelineStatus?: PipelineStatus
 }
 
 // プラットフォーム情報

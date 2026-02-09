@@ -18,7 +18,7 @@ function createWindow(): void {
 
   mainWindow = new BrowserWindow({
     width: 480,
-    height: 600,
+    height: 624,
     minWidth: 400,
     minHeight: 500,
     show: false,

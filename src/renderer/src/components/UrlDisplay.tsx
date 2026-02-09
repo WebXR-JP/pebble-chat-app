@@ -32,7 +32,8 @@ interface Props {
 
 export function UrlDisplay({ streamInfo }: Props) {
   const [copied, setCopied] = useState<string | null>(null)
-  const isLoading = !streamInfo.readyForPlayback || !streamInfo.publicUrl
+  const isError = streamInfo.status === 'error'
+  const isLoading = !isError && (!streamInfo.readyForPlayback || !streamInfo.publicUrl)
 
   useEffect(() => {
     injectSkeletonStyle()
@@ -48,6 +49,19 @@ export function UrlDisplay({ streamInfo }: Props) {
       // コピー失敗は無視
     }
   }, [streamInfo.publicUrl])
+
+  if (isError) {
+    return (
+      <div style={styles.container}>
+        <h3 style={styles.title}>公開URL</h3>
+        <div style={styles.section}>
+          <div style={styles.errorBox}>
+            公開URLを取得できませんでした
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -144,6 +158,14 @@ const styles: { [key: string]: React.CSSProperties } = {
     whiteSpace: 'nowrap',
     boxShadow: '0 2px 8px rgba(139, 115, 85, 0.25)',
     transition: 'all 0.2s ease'
+  },
+  errorBox: {
+    padding: '10px 12px',
+    backgroundColor: '#FEF2F0',
+    borderRadius: '8px',
+    fontSize: '12px',
+    color: '#C45C4A',
+    border: '1px solid rgba(196, 92, 74, 0.2)'
   },
   skeletonLabel: {
     width: '100px',

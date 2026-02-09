@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/electron/main'
 import { spawn, ChildProcess, execSync } from 'child_process'
 import { getMediaMTXPath, getMediaMTXConfigPath } from '../utils/paths'
 import { isFFmpegInfoMessage } from '../utils/ffmpeg'
+import { isNormalShutdownMessage } from '../utils/mediamtx'
 import { updateMediaMTXConfig } from './binary'
 
 let mediamtxProcess: ChildProcess | null = null
@@ -74,11 +75,12 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
 
     // エラー出力を監視
     // 注意: FFmpegはバージョン情報などをstderrに出力するため、すべてがエラーではない
+    // また、正常終了時のメッセージもstderrに出力される
     mediamtxProcess.stderr?.on('data', (data: Buffer) => {
       const output = data.toString()
 
-      if (isFFmpegInfoMessage(output)) {
-        console.log('[MediaMTX FFmpeg]', output)
+      if (isFFmpegInfoMessage(output) || isNormalShutdownMessage(output)) {
+        console.log('[MediaMTX]', output.trim())
       } else {
         console.error('[MediaMTX Error]', output)
         Sentry.captureMessage(`MediaMTX stderr: ${output.trim()}`, 'error')
@@ -110,15 +112,24 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
       })
     })
 
-    // タイムアウト（5秒で起動確認できなければ成功とみなす）
-    setTimeout(() => {
+    // タイムアウト（5秒で起動確認できなければヘルスチェックで判定）
+    setTimeout(async () => {
       if (!started && mediamtxProcess) {
         started = true
-        resolve({
-          running: true,
-          pid: mediamtxProcess.pid ?? null,
-          error: null
-        })
+        const healthy = await checkMediaMTXHealth()
+        if (healthy) {
+          resolve({
+            running: true,
+            pid: mediamtxProcess?.pid ?? null,
+            error: null
+          })
+        } else {
+          resolve({
+            running: false,
+            pid: null,
+            error: 'MediaMTXの起動タイムアウト: ヘルスチェックに失敗しました'
+          })
+        }
       }
     }, 5000)
   })
@@ -192,6 +203,7 @@ export async function checkHlsPlaybackReady(streamId: string): Promise<boolean> 
 export function pollHlsPlaybackReady(
   streamId: string,
   onReady: () => void,
+  onTimeout: () => void,
   options: { interval?: number; maxAttempts?: number } = {}
 ): () => void {
   const { interval = 1000, maxAttempts = 60 } = options
@@ -214,6 +226,7 @@ export function pollHlsPlaybackReady(
     if (attempts >= maxAttempts) {
       console.log('[MediaMTX] HLS playback check timed out')
       Sentry.captureMessage(`HLS playback check timed out after ${maxAttempts} attempts (streamId: ${streamId})`, 'warning')
+      onTimeout()
       return
     }
 
