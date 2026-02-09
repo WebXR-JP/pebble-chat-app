@@ -60,6 +60,22 @@ export interface StreamInfo {
   pipelineStatus?: PipelineStatus
 }
 
+// アップデート情報
+export interface UpdateInfo {
+  available: boolean
+  currentVersion: string
+  latestVersion: string
+  downloadUrl: string | null
+  releaseDate: string | null
+}
+
+// バージョンマニフェスト（R2のversion.json）
+export interface VersionManifest {
+  version: string
+  releaseDate: string
+  downloads: Record<string, string>
+}
+
 // プラットフォーム情報
 export type Platform = 'darwin' | 'win32' | 'linux'
 export type Architecture = 'x64' | 'arm64'
@@ -93,6 +109,11 @@ export const IPC_CHANNELS = {
   CONFIG_GET: 'config:get',
   CONFIG_SET: 'config:set',
 
+  // アップデート
+  UPDATE_CHECK: 'update:check',
+  UPDATE_AVAILABLE: 'update:available',
+  OPEN_EXTERNAL: 'util:openExternal',
+
   // ウィンドウ
   WINDOW_RESIZE: 'window:resize',
   WINDOW_MINIMIZE: 'window:minimize',
@@ -120,6 +141,11 @@ export interface ElectronAPI {
   onCaptureStatus: (callback: (info: CaptureInfo) => void) => () => void
   getCaptureStatus: () => Promise<CaptureInfo>
   openScreenRecordingSettings: () => Promise<void>
+
+  // アップデート
+  checkForUpdate: () => Promise<UpdateInfo>
+  onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void
+  openExternal: (url: string) => Promise<void>
 
   // ウィンドウ
   resizeWindow: (height: number) => Promise<void>

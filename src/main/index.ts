@@ -72,7 +72,7 @@ app.whenReady().then(() => {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:* ws://localhost:* https://*.ingest.us.sentry.io; img-src 'self' data:"
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' http://localhost:* ws://localhost:* https://*.ingest.us.sentry.io https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev; img-src 'self' data:"
         ]
       }
     })

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC_CHANNELS, ElectronAPI, SetupProgress, StreamInfo, CaptureInfo, CaptureSourcesResult } from '../shared/types'
+import { IPC_CHANNELS, ElectronAPI, SetupProgress, StreamInfo, CaptureInfo, CaptureSourcesResult, UpdateInfo } from '../shared/types'
 
 const electronAPI: ElectronAPI = {
   // セットアップ
@@ -50,6 +50,19 @@ const electronAPI: ElectronAPI = {
   getCaptureStatus: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_STATUS),
 
   openScreenRecordingSettings: () => ipcRenderer.invoke(IPC_CHANNELS.CAPTURE_OPEN_SETTINGS),
+
+  // アップデート
+  checkForUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK),
+
+  onUpdateAvailable: (callback: (info: UpdateInfo) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, info: UpdateInfo) => callback(info)
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_AVAILABLE, handler)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_AVAILABLE, handler)
+    }
+  },
+
+  openExternal: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.OPEN_EXTERNAL, url),
 
   // ウィンドウ
   resizeWindow: (height: number) => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_RESIZE, height),
