@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/electron/main'
 import { spawn, ChildProcess, execSync } from 'child_process'
 import { getMediaMTXPath, getMediaMTXConfigPath } from '../utils/paths'
 import { isFFmpegInfoMessage } from '../utils/ffmpeg'
-import { isNormalShutdownMessage } from '../utils/mediamtx'
+import { isIgnorableStderrMessage } from '../utils/mediamtx'
 import { updateMediaMTXConfig } from './binary'
 
 let mediamtxProcess: ChildProcess | null = null
@@ -79,7 +79,7 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
     mediamtxProcess.stderr?.on('data', (data: Buffer) => {
       const output = data.toString()
 
-      if (isFFmpegInfoMessage(output) || isNormalShutdownMessage(output)) {
+      if (isIgnorableStderrMessage(output) || isFFmpegInfoMessage(output)) {
         console.log('[MediaMTX]', output.trim())
       } else {
         console.error('[MediaMTX Error]', output)
