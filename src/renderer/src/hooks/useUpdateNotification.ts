@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { UpdateInfo } from '../../../shared/types'
 import { DEFAULT_UPDATE_INFO } from '../constants/defaults'
+import { shouldShowUpdateNotification, isDismissedVersion } from '../utils/update'
 
 const DISMISSED_VERSION_KEY = 'pebble-dismissed-update-version'
 
@@ -12,7 +13,7 @@ export function useUpdateNotification() {
   useEffect(() => {
     const unsubscribe = window.electronAPI.onUpdateAvailable((info) => {
       const dismissedVersion = localStorage.getItem(DISMISSED_VERSION_KEY)
-      if (dismissedVersion === info.latestVersion) return
+      if (isDismissedVersion(info.latestVersion, dismissedVersion)) return
       setUpdateInfo(info)
       setDismissed(false)
     })
@@ -32,7 +33,7 @@ export function useUpdateNotification() {
     }
   }, [updateInfo.downloadUrl])
 
-  const visible = updateInfo.available && !dismissed
+  const visible = shouldShowUpdateNotification(updateInfo, dismissed)
 
   return { updateInfo, visible, dismiss, openDownload }
 }
