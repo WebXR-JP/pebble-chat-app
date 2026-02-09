@@ -1,4 +1,4 @@
-import type { SetupProgress, CaptureSource, CaptureInfo, StreamInfo } from '../../../shared/types'
+import type { SetupProgress, CaptureSource, CaptureInfo, StreamInfo, UpdateInfo } from '../../../shared/types'
 
 export const DEFAULT_SETUP_PROGRESS: SetupProgress = {
   mediamtx: 'pending',
@@ -22,4 +22,12 @@ export const DEFAULT_STREAM_INFO: StreamInfo = {
   publicUrl: null,
   readyForPlayback: false,
   error: null
+}
+
+export const DEFAULT_UPDATE_INFO: UpdateInfo = {
+  available: false,
+  currentVersion: '',
+  latestVersion: '',
+  downloadUrl: null,
+  releaseDate: null
 }

@@ -4,9 +4,11 @@ import { SetupProgress } from './components/SetupProgress'
 import { ObsStreamingScreen } from './components/ObsStreamingScreen'
 import { DirectStreamingScreen } from './components/DirectStreamingScreen'
 import { SourceSelectModal } from './components/SourceSelectModal'
+import { UpdateNotification } from './components/UpdateNotification'
 import { useSetup } from './hooks/useSetup'
 import { useStreaming } from './hooks/useStreaming'
 import { useCapture } from './hooks/useCapture'
+import { useUpdateNotification } from './hooks/useUpdateNotification'
 import { validateStreamId } from './utils/formatters'
 import { CaptureSource, Platform } from '../../shared/types'
 
@@ -19,6 +21,7 @@ function App() {
   const setup = useSetup()
   const streaming = useStreaming()
   const capture = useCapture()
+  const update = useUpdateNotification()
   const [streamMode, setStreamMode] = useState<StreamMode>('direct')
   const [appState, setAppState] = useState<AppState>('idle')
   const [selectedSource, setSelectedSource] = useState<CaptureSource | null>(null)
@@ -260,6 +263,15 @@ function App() {
           onSelect={handleSourceSelect}
           onCancel={handleCancelSelect}
           onOpenSettings={capture.openSettings}
+        />
+      )}
+
+      {/* アップデート通知 */}
+      {update.visible && (
+        <UpdateNotification
+          updateInfo={update.updateInfo}
+          onDownload={update.openDownload}
+          onDismiss={update.dismiss}
         />
       )}
 

@@ -85,6 +85,9 @@ jobs:
     needs: [build-mac, build-win]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -113,11 +116,31 @@ jobs:
           acl = private
           EOF
 
+      - name: Generate version.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          RELEASE_DATE=$(date -u +%Y-%m-%d)
+          R2_BASE="https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases"
+          cat > version.json << EOF
+          {
+            "version": "${VERSION}",
+            "releaseDate": "${RELEASE_DATE}",
+            "downloads": {
+              "mac-arm64": "${R2_BASE}/PebbleChat-mac-arm64.dmg",
+              "mac-x64": "${R2_BASE}/PebbleChat-mac-x64.dmg",
+              "win-x64": "${R2_BASE}/PebbleChat-win-x64.exe"
+            }
+          }
+          EOF
+          echo "Generated version.json:"
+          cat version.json
+
       - name: Prepare upload directory
         run: |
           mkdir -p upload/releases
           cp artifacts/mac-artifacts/*.dmg upload/releases/
           cp artifacts/win-artifacts/*.exe upload/releases/
+          cp version.json upload/releases/
           echo "Files to upload:"
           ls -la upload/releases/
 
@@ -138,3 +161,4 @@ jobs:
           echo "- \`releases/PebbleChat-mac-x64.dmg\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`releases/PebbleChat-mac-arm64.dmg\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`releases/PebbleChat-win-x64.exe\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`releases/version.json\`" >> $GITHUB_STEP_SUMMARY
