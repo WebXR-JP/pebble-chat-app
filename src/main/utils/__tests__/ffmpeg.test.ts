@@ -106,6 +106,18 @@ describe('isFFmpegInfoMessage', () => {
     it('flv filesize コンテキストログは情報メッセージ', () => {
       expect(isFFmpegInfoMessage('[flv @ 0xb03050500] Failed to update header with correct filesize.')).toBe(true)
     })
+
+    it('vf# コンテキストログは情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('[vf#0:0 @ 0000022f7f8dee40] Reconfiguring filter graph because video parameters changed to yuv420p(unknown, unknown), 1004x1080')).toBe(true)
+    })
+
+    it('Windowsアドレス形式の rtsp コンテキストログは情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('[rtsp @ 0000028b3b023f80] max delay reached. need to consume packet')).toBe(true)
+    })
+
+    it('Windowsアドレス形式の libx264 コンテキストログは情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('[libx264 @ 0000028b3bc75040] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2')).toBe(true)
+    })
   })
 
   describe('一時的な警告', () => {
