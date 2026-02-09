@@ -22,9 +22,8 @@ export function isFFmpegInfoMessage(output: string): boolean {
     output.includes('title') ||
     // FFmpegインタラクティブメッセージ
     output.includes('Press [q] to stop') ||
-    // コンテキストログ（rtsp, vp8, vist, vf, libx264, flv等）
-    // アドレス形式: macOS "0x7f8b1c000000" / Windows "0000028b3b023f80"
-    /\[(rtsp|vp8|vist#[0-9:\/]+|vf#[0-9:]+|libx264|dec:vp8|flv) @ (?:0x)?[0-9a-f]+\]/.test(output) ||
+    // コンテキストログ: FFmpegは全モジュールで [名前 @ アドレス] 形式をstderrに出力する
+    /\[[^\]]+\s+@\s+(?:0x)?[0-9a-f]+\]/.test(output) ||
     // 一時的な警告（キーフレーム待ち、配信開始時に頻発するが正常）
     output.includes('Keyframe missing') ||
     output.includes('Discarding interframe without a prior keyframe') ||
