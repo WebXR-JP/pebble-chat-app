@@ -2,7 +2,7 @@ import { ipcMain, shell, BrowserWindow } from 'electron'
 import { IPC_CHANNELS } from '../../shared/types'
 import { checkForUpdate } from '../services/updateChecker'
 
-const AUTO_CHECK_DELAY_MS = 5000
+export const AUTO_CHECK_DELAY_MS = 5000
 
 export function registerUpdateHandlers(getMainWindow: () => BrowserWindow | null): void {
   // 手動チェック
