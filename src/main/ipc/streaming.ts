@@ -153,12 +153,23 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         hlsUrl: null,
         publicUrl: null,
         readyForPlayback: false,
-        error: null
+        error: null,
+        pipelineStatus: { mediamtx: 'pending', rtmp: 'pending', hls: 'pending' }
       })
 
       // MediaMTX起動（ストリームIDを渡す）
       const mediamtxStatus = await startMediaMTX(currentStreamId)
       if (!mediamtxStatus.running) {
+        const errorInfo: StreamInfo = {
+          status: 'error',
+          rtmpUrl: null,
+          hlsUrl: null,
+          publicUrl: null,
+          readyForPlayback: false,
+          error: `MediaMTXの起動に失敗: ${mediamtxStatus.error}`,
+          pipelineStatus: { mediamtx: 'error', rtmp: 'pending', hls: 'pending' }
+        }
+        sendStreamStatus(window, errorInfo)
         throw new Error(`MediaMTXの起動に失敗: ${mediamtxStatus.error}`)
       }
 
@@ -168,20 +179,36 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         hlsUrl: null,  // ローカルHLSは使用しない
         publicUrl: `${RELAY_SERVER_URL}/${currentStreamId}/index.m3u8`,  // サーバー経由のHLS
         readyForPlayback: false,
-        error: null
+        error: null,
+        pipelineStatus: { mediamtx: 'ready', rtmp: 'pending', hls: 'pending' }
       }
 
       sendStreamStatus(window, info)
 
       // サーバー側のHLSが再生可能になるまでバックグラウンドでポーリング
-      cancelHlsPolling = pollHlsPlaybackReady(currentStreamId, () => {
-        const currentWindow = getMainWindow()
-        const readyInfo: StreamInfo = {
-          ...currentStreamInfo,
-          readyForPlayback: true
+      cancelHlsPolling = pollHlsPlaybackReady(
+        currentStreamId,
+        () => {
+          const currentWindow = getMainWindow()
+          const readyInfo: StreamInfo = {
+            ...currentStreamInfo,
+            readyForPlayback: true,
+            pipelineStatus: { mediamtx: 'ready', rtmp: 'connected', hls: 'ready' }
+          }
+          sendStreamStatus(currentWindow, readyInfo)
+        },
+        () => {
+          const currentWindow = getMainWindow()
+          const timeoutInfo: StreamInfo = {
+            ...currentStreamInfo,
+            status: 'error',
+            readyForPlayback: false,
+            error: 'HLS配信の準備がタイムアウトしました。サーバーへの接続に問題がある可能性があります。',
+            pipelineStatus: { mediamtx: 'ready', rtmp: 'error', hls: 'timeout' }
+          }
+          sendStreamStatus(currentWindow, timeoutInfo)
         }
-        sendStreamStatus(currentWindow, readyInfo)
-      })
+      )
 
       return info
     } catch (error) {
@@ -192,7 +219,8 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         hlsUrl: null,
         publicUrl: null,
         readyForPlayback: false,
-        error: errorMessage
+        error: errorMessage,
+        pipelineStatus: currentStreamInfo.pipelineStatus ?? { mediamtx: 'error', rtmp: 'pending', hls: 'pending' }
       }
       sendStreamStatus(window, info)
       throw error
@@ -215,7 +243,8 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       hlsUrl: null,
       publicUrl: null,
       readyForPlayback: false,
-      error: null
+      error: null,
+      pipelineStatus: undefined
     })
 
     await stopMediaMTX()
@@ -229,7 +258,8 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       hlsUrl: null,
       publicUrl: null,
       readyForPlayback: false,
-      error: null
+      error: null,
+      pipelineStatus: undefined
     })
   })
 
@@ -244,7 +274,8 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         hlsUrl: null,
         publicUrl: `${RELAY_SERVER_URL}/${currentStreamId}/index.m3u8`,
         readyForPlayback: currentStreamInfo.readyForPlayback,
-        error: null
+        error: null,
+        pipelineStatus: currentStreamInfo.pipelineStatus
       }
     }
 

@@ -1,5 +1,68 @@
-import type { StreamInfo, CaptureSource, Platform } from '../../../shared/types'
+import type { StreamInfo, CaptureSource, Platform, PipelineStageStatus } from '../../../shared/types'
 import { UrlDisplay } from './UrlDisplay'
+
+// パイプライン段階の定義
+interface PipelineStage {
+  key: string
+  label: string
+  getStatus: (streamInfo: StreamInfo, connectionState: RTCPeerConnectionState | null) => PipelineStageStatus
+}
+
+const PIPELINE_STAGES: PipelineStage[] = [
+  {
+    key: 'mediamtx',
+    label: 'MediaMTX',
+    getStatus: (streamInfo) => streamInfo.pipelineStatus?.mediamtx ?? 'pending'
+  },
+  {
+    key: 'whip',
+    label: 'WHIP',
+    getStatus: (_streamInfo, connectionState) => {
+      if (!connectionState) return 'pending'
+      if (connectionState === 'connected') return 'connected'
+      if (connectionState === 'failed' || connectionState === 'disconnected' || connectionState === 'closed') return 'error'
+      return 'running'
+    }
+  },
+  {
+    key: 'rtmp',
+    label: 'サーバー接続',
+    getStatus: (streamInfo) => streamInfo.pipelineStatus?.rtmp ?? 'pending'
+  },
+  {
+    key: 'hls',
+    label: 'HLS配信',
+    getStatus: (streamInfo) => streamInfo.pipelineStatus?.hls ?? 'pending'
+  }
+]
+
+function getStageIcon(status: PipelineStageStatus): string {
+  switch (status) {
+    case 'connected':
+    case 'ready':
+      return '\u2713'
+    case 'error':
+    case 'timeout':
+      return '\u2717'
+    default:
+      return '\u25CB'
+  }
+}
+
+function getStageColor(status: PipelineStageStatus): string {
+  switch (status) {
+    case 'connected':
+    case 'ready':
+      return '#4caf50'
+    case 'error':
+    case 'timeout':
+      return '#C45C4A'
+    case 'running':
+      return '#ff9800'
+    default:
+      return '#9B9B9B'
+  }
+}
 
 interface Props {
   streamInfo: StreamInfo
@@ -20,7 +83,10 @@ export function DirectStreamingScreen({
   isCapturing,
   platform
 }: Props) {
+  const isError = streamInfo.status === 'error'
+
   const getStatusColor = (): string => {
+    if (isError) return '#C45C4A'
     if (connectionState === 'connected') {
       return streamInfo.readyForPlayback ? '#4caf50' : '#ff9800'
     }
@@ -28,11 +94,15 @@ export function DirectStreamingScreen({
   }
 
   const getStatusText = (): string => {
+    if (isError) return 'エラー'
     if (connectionState === 'connected') {
       return streamInfo.readyForPlayback ? '配信中' : '準備中...'
     }
     return '接続中...'
   }
+
+  // パイプラインが表示可能か（starting or running or error のとき）
+  const showPipeline = streamInfo.status === 'starting' || streamInfo.status === 'running' || isError
 
   return (
     <div style={{
@@ -40,7 +110,10 @@ export function DirectStreamingScreen({
       paddingTop: platform === 'win32' ? '8px' : '32px'
     }}>
       {/* ステータス */}
-      <div style={styles.statusCard}>
+      <div style={{
+        ...styles.statusCard,
+        ...(isError ? styles.statusCardError : {})
+      }}>
         <div style={styles.statusHeader}>
           <span
             style={{
@@ -48,8 +121,43 @@ export function DirectStreamingScreen({
               backgroundColor: getStatusColor()
             }}
           />
-          <span style={styles.statusText}>{getStatusText()}</span>
+          <span style={{
+            ...styles.statusText,
+            color: isError ? '#C45C4A' : colors.success
+          }}>{getStatusText()}</span>
         </div>
+
+        {/* エラーメッセージ */}
+        {isError && streamInfo.error && (
+          <div style={styles.errorMessage}>
+            {streamInfo.error}
+          </div>
+        )}
+
+        {/* パイプラインステータス */}
+        {showPipeline && (
+          <div style={styles.pipelineContainer}>
+            {PIPELINE_STAGES.map((stage) => {
+              const status = stage.getStatus(streamInfo, connectionState)
+              return (
+                <div key={stage.key} style={styles.pipelineStage}>
+                  <span style={{
+                    ...styles.pipelineIcon,
+                    color: getStageColor(status)
+                  }}>
+                    {getStageIcon(status)}
+                  </span>
+                  <span style={{
+                    ...styles.pipelineLabel,
+                    color: getStageColor(status)
+                  }}>
+                    {stage.label}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* 選択中のソース情報 */}
         {selectedSource && (
@@ -126,6 +234,40 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: colors.successBg,
     borderRadius: '14px',
     border: '1px solid rgba(93, 138, 102, 0.2)'
+  },
+  statusCardError: {
+    backgroundColor: '#FEF2F0',
+    border: '1px solid rgba(196, 92, 74, 0.2)'
+  },
+  errorMessage: {
+    marginTop: '10px',
+    padding: '10px 12px',
+    backgroundColor: 'rgba(196, 92, 74, 0.08)',
+    borderRadius: '8px',
+    fontSize: '12px',
+    color: '#C45C4A',
+    lineHeight: 1.5
+  },
+  pipelineContainer: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '12px',
+    padding: '10px 12px',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: '8px'
+  },
+  pipelineStage: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px'
+  },
+  pipelineIcon: {
+    fontSize: '12px',
+    fontWeight: 700
+  },
+  pipelineLabel: {
+    fontSize: '11px',
+    fontWeight: 500
   },
   statusHeader: {
     display: 'flex',
