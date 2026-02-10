@@ -1,0 +1,34 @@
+---
+- name: Install vnstat and cron
+  apt:
+    name:
+      - vnstat
+      - cron
+    state: present
+
+- name: Enable and start vnstat
+  systemd:
+    name: vnstat
+    enabled: yes
+    state: started
+
+- name: Create stats output directory
+  file:
+    path: /var/www/stats
+    state: directory
+    mode: '0755'
+
+- name: Copy stats HTML generation script
+  template:
+    src: generate-stats.sh.j2
+    dest: /usr/local/bin/generate-stats.sh
+    mode: '0755'
+
+- name: Set up cron job to generate stats every 5 minutes
+  cron:
+    name: "Generate vnstat HTML"
+    minute: "*/5"
+    job: "/usr/local/bin/generate-stats.sh"
+
+- name: Run stats generation once
+  command: /usr/local/bin/generate-stats.sh

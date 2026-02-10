@@ -1,0 +1,149 @@
+#!/bin/bash
+# vnstat のトラフィックデータを静的HTMLとして出力する
+
+OUTPUT="/var/www/stats/index.html"
+LIMIT_TB=10
+LIMIT_BYTES=$((LIMIT_TB * 1024 * 1024 * 1024 * 1024))
+
+# vnstat JSON出力を取得
+JSON=$(vnstat --json m)
+
+# 今月のトラフィック（バイト）を取得
+CURRENT_MONTH=$(date +%-m)
+CURRENT_YEAR=$(date +%Y)
+RX=$(echo "$JSON" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for m in data.get('interfaces', [{}])[0].get('traffic', {}).get('month', []):
+    if m['date']['month'] == $CURRENT_MONTH and m['date']['year'] == $CURRENT_YEAR:
+        print(m['rx'])
+        break
+else:
+    print(0)
+")
+TX=$(echo "$JSON" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for m in data.get('interfaces', [{}])[0].get('traffic', {}).get('month', []):
+    if m['date']['month'] == $CURRENT_MONTH and m['date']['year'] == $CURRENT_YEAR:
+        print(m['tx'])
+        break
+else:
+    print(0)
+")
+
+TOTAL=$((RX + TX))
+
+# 人間が読める形式に変換
+format_bytes() {
+    local bytes=$1
+    if [ "$bytes" -ge 1099511627776 ]; then
+        echo "$(echo "scale=2; $bytes / 1099511627776" | bc) TB"
+    elif [ "$bytes" -ge 1073741824 ]; then
+        echo "$(echo "scale=2; $bytes / 1073741824" | bc) GB"
+    elif [ "$bytes" -ge 1048576 ]; then
+        echo "$(echo "scale=2; $bytes / 1048576" | bc) MB"
+    else
+        echo "$bytes B"
+    fi
+}
+
+RX_H=$(format_bytes $RX)
+TX_H=$(format_bytes $TX)
+TOTAL_H=$(format_bytes $TOTAL)
+LIMIT_H="${LIMIT_TB} TB"
+
+# 使用率を計算
+if [ "$LIMIT_BYTES" -gt 0 ]; then
+    PERCENT=$(echo "scale=2; $TOTAL * 100 / $LIMIT_BYTES" | bc)
+else
+    PERCENT="0"
+fi
+
+# 今日のトラフィック
+TODAY_JSON=$(vnstat --json d)
+TODAY_RX=$(echo "$TODAY_JSON" | python3 -c "
+import sys, json, datetime
+data = json.load(sys.stdin)
+today = datetime.date.today()
+for d in data.get('interfaces', [{}])[0].get('traffic', {}).get('day', []):
+    if d['date']['year'] == today.year and d['date']['month'] == today.month and d['date']['day'] == today.day:
+        print(d['rx'])
+        break
+else:
+    print(0)
+")
+TODAY_TX=$(echo "$TODAY_JSON" | python3 -c "
+import sys, json, datetime
+data = json.load(sys.stdin)
+today = datetime.date.today()
+for d in data.get('interfaces', [{}])[0].get('traffic', {}).get('day', []):
+    if d['date']['year'] == today.year and d['date']['month'] == today.month and d['date']['day'] == today.day:
+        print(d['tx'])
+        break
+else:
+    print(0)
+")
+TODAY_TOTAL=$((TODAY_RX + TODAY_TX))
+TODAY_H=$(format_bytes $TODAY_TOTAL)
+
+UPDATED=$(date '+%Y-%m-%d %H:%M:%S %Z')
+
+# バーの色（80%以上で赤、50%以上で黄）
+BAR_COLOR="#4caf50"
+if (( $(echo "$PERCENT >= 80" | bc -l) )); then
+    BAR_COLOR="#f44336"
+elif (( $(echo "$PERCENT >= 50" | bc -l) )); then
+    BAR_COLOR="#ff9800"
+fi
+
+cat > "$OUTPUT" << HTMLEOF
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PebbleChat Relay - Traffic Stats</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 24px; }
+  .container { max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 18px; color: #8b7355; margin-bottom: 24px; }
+  .card { background: #16213e; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .stat-row { display: flex; justify-content: space-between; padding: 6px 0; }
+  .stat-label { color: #aaa; }
+  .stat-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .progress-bar { background: #2a2a4a; border-radius: 8px; height: 24px; margin: 12px 0; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 8px; transition: width 0.3s; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; min-width: 48px; }
+  .percent { font-size: 32px; font-weight: 700; color: #fff; }
+  .updated { font-size: 11px; color: #555; text-align: center; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>PebbleChat Relay Stats</h1>
+
+  <div class="card">
+    <div class="card-title">Monthly Bandwidth ($(date '+%Y/%m'))</div>
+    <div style="text-align:center; margin: 8px 0;">
+      <span class="percent">${PERCENT}%</span>
+      <div style="color:#888; font-size:13px; margin-top:4px;">${TOTAL_H} / ${LIMIT_H}</div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: ${PERCENT}%; background: ${BAR_COLOR};">${PERCENT}%</div>
+    </div>
+    <div class="stat-row"><span class="stat-label">Receive</span><span class="stat-value">${RX_H}</span></div>
+    <div class="stat-row"><span class="stat-label">Transmit</span><span class="stat-value">${TX_H}</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Today</div>
+    <div class="stat-row"><span class="stat-label">Total</span><span class="stat-value">${TODAY_H}</span></div>
+  </div>
+
+  <div class="updated">Updated: ${UPDATED}</div>
+</div>
+</body>
+</html>
+HTMLEOF

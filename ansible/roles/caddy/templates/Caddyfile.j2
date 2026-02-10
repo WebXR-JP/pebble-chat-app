@@ -2,6 +2,13 @@ pebble.xrift.net {
     # ヘルスチェック（最初にマッチさせる）
     respond /health "OK" 200
 
+    # トラフィック統計ページ
+    handle /stats {
+        root * /var/www/stats
+        rewrite * /index.html
+        file_server
+    }
+
     # HLS配信（MediaMTXからプロキシ）- 任意のストリームIDに対応
     reverse_proxy /* localhost:{{ mediamtx_port_hls }}
 
