@@ -28,6 +28,10 @@ export function isFFmpegInfoMessage(output: string): boolean {
     output.includes('Keyframe missing') ||
     output.includes('Discarding interframe without a prior keyframe') ||
     output.includes('Error submitting packet to decoder') ||
+    // RTPパケットロス警告（ネットワーク起因、対処不可）
+    output.includes('RTP: missed') ||
+    // FFmpeg終了時の汎用メッセージ（配信停止時に出力される）
+    output.includes('Conversion failed!') ||
     // FFmpegエンコード進捗情報
     /^frame=\s*\d+/.test(output.trim())
   )

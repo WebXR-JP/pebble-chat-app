@@ -134,6 +134,22 @@ describe('isFFmpegInfoMessage', () => {
     })
   })
 
+  describe('RTPパケットロス警告', () => {
+    it('RTP: missed を含む出力は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('RTP: missed 22 packets')).toBe(true)
+    })
+
+    it('RTP: missed 1 packets を含む出力は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('RTP: missed 1 packets')).toBe(true)
+    })
+  })
+
+  describe('FFmpeg終了時の汎用メッセージ', () => {
+    it('Conversion failed! は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('Conversion failed!')).toBe(true)
+    })
+  })
+
   describe('エンコード進捗情報', () => {
     it('frame= で始まる出力は情報メッセージ', () => {
       expect(isFFmpegInfoMessage('frame=  123 fps=30 q=28.0 size=    1234kB time=00:00:04.10')).toBe(true)
