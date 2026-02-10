@@ -7,6 +7,7 @@ LIMIT_BYTES=$((LIMIT_TB * 1024 * 1024 * 1024 * 1024))
 
 # vnstat JSON出力を取得
 JSON=$(vnstat --json m)
+DAY_JSON=$(vnstat --json d)
 
 # 今月のトラフィック（バイト）を取得
 CURRENT_MONTH=$(date +%-m)
@@ -61,8 +62,7 @@ else
 fi
 
 # 今日のトラフィック
-TODAY_JSON=$(vnstat --json d)
-TODAY_RX=$(echo "$TODAY_JSON" | python3 -c "
+TODAY_RX=$(echo "$DAY_JSON" | python3 -c "
 import sys, json, datetime
 data = json.load(sys.stdin)
 today = datetime.date.today()
@@ -73,7 +73,7 @@ for d in data.get('interfaces', [{}])[0].get('traffic', {}).get('day', []):
 else:
     print(0)
 ")
-TODAY_TX=$(echo "$TODAY_JSON" | python3 -c "
+TODAY_TX=$(echo "$DAY_JSON" | python3 -c "
 import sys, json, datetime
 data = json.load(sys.stdin)
 today = datetime.date.today()
@@ -86,6 +86,21 @@ else:
 ")
 TODAY_TOTAL=$((TODAY_RX + TODAY_TX))
 TODAY_H=$(format_bytes $TODAY_TOTAL)
+
+# 日別データをJSON配列として生成（今月分）
+DAILY_JSON=$(echo "$DAY_JSON" | python3 -c "
+import sys, json, datetime
+data = json.load(sys.stdin)
+now = datetime.date.today()
+days = data.get('interfaces', [{}])[0].get('traffic', {}).get('day', [])
+result = []
+for d in days:
+    dt = d['date']
+    if dt['year'] == now.year and dt['month'] == now.month:
+        result.append({'day': dt['day'], 'rx': d['rx'], 'tx': d['tx']})
+result.sort(key=lambda x: x['day'])
+print(json.dumps(result))
+")
 
 UPDATED=$(date '+%Y-%m-%d %H:%M:%S %Z')
 
@@ -118,6 +133,9 @@ cat > "$OUTPUT" << HTMLEOF
   .progress-fill { height: 100%; border-radius: 8px; transition: width 0.3s; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; min-width: 48px; }
   .percent { font-size: 32px; font-weight: 700; color: #fff; }
   .updated { font-size: 11px; color: #555; text-align: center; margin-top: 16px; }
+  canvas { width: 100%; height: 160px; display: block; }
+  .legend { display: flex; gap: 16px; justify-content: center; margin-top: 8px; font-size: 11px; color: #888; }
+  .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -138,12 +156,104 @@ cat > "$OUTPUT" << HTMLEOF
   </div>
 
   <div class="card">
+    <div class="card-title">Daily Traffic</div>
+    <canvas id="chart" height="160"></canvas>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:#5D8A66;"></span>Receive</span>
+      <span><span class="legend-dot" style="background:#8B7355;"></span>Transmit</span>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-title">Today</div>
     <div class="stat-row"><span class="stat-label">Total</span><span class="stat-value">${TODAY_H}</span></div>
   </div>
 
   <div class="updated">Updated: ${UPDATED}</div>
 </div>
+<script>
+(function() {
+  var data = ${DAILY_JSON};
+  var canvas = document.getElementById('chart');
+  var ctx = canvas.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  var W = rect.width, H = rect.height;
+
+  if (data.length === 0) {
+    ctx.fillStyle = '#555';
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data yet', W / 2, H / 2);
+    return;
+  }
+
+  var pad = { top: 16, right: 12, bottom: 28, left: 48 };
+  var chartW = W - pad.left - pad.right;
+  var chartH = H - pad.top - pad.bottom;
+
+  // 最大値を計算
+  var maxVal = 0;
+  for (var i = 0; i < data.length; i++) {
+    var t = data[i].rx + data[i].tx;
+    if (t > maxVal) maxVal = t;
+  }
+  if (maxVal === 0) maxVal = 1;
+
+  // Y軸のグリッド線を描画
+  ctx.strokeStyle = '#2a2a4a';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#555';
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  for (var g = 0; g <= 4; g++) {
+    var gy = pad.top + chartH - (chartH * g / 4);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, gy);
+    ctx.lineTo(W - pad.right, gy);
+    ctx.stroke();
+    var label = formatB(maxVal * g / 4);
+    ctx.fillText(label, pad.left - 6, gy + 3);
+  }
+
+  // バーを描画
+  var barGap = 2;
+  var barW = (chartW / data.length) - barGap;
+  if (barW < 2) barW = 2;
+
+  for (var i = 0; i < data.length; i++) {
+    var x = pad.left + i * (barW + barGap);
+    var rxH = (data[i].rx / maxVal) * chartH;
+    var txH = (data[i].tx / maxVal) * chartH;
+
+    // Receive（下）
+    ctx.fillStyle = '#5D8A66';
+    ctx.fillRect(x, pad.top + chartH - rxH - txH, barW, rxH);
+
+    // Transmit（上）
+    ctx.fillStyle = '#8B7355';
+    ctx.fillRect(x, pad.top + chartH - txH, barW, txH);
+
+    // X軸ラベル（間引き）
+    if (data.length <= 15 || i % Math.ceil(data.length / 10) === 0 || i === data.length - 1) {
+      ctx.fillStyle = '#555';
+      ctx.font = '10px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(data[i].day, x + barW / 2, H - 6);
+    }
+  }
+
+  function formatB(bytes) {
+    if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+    if (bytes >= 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return bytes + ' B';
+  }
+})();
+</script>
 </body>
 </html>
 HTMLEOF
