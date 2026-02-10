@@ -4,5 +4,6 @@
   become: yes
   roles:
     - common
+    - vnstat
     - mediamtx
     - caddy

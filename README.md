@@ -99,6 +99,7 @@ VRChat内でのライブ配信サービス「TopazChat」は、個人運営に�
 | ドメイン | pebble.xrift.net |
 | 月額コスト | **$0**（無料枠） |
 | 帯域 | 10TB/月（約22,000視聴時間 @ 480p/1Mbps） |
+| トラフィック統計 | [pebble.xrift.net/stats](https://pebble.xrift.net/stats) |
 
 ## 配信仕様
 

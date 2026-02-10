@@ -99,6 +99,7 @@ The streaming URL will be in the format `https://pebble.xrift.net/{streamId}/ind
 | Domain | pebble.xrift.net |
 | Monthly cost | **$0** (free tier) |
 | Bandwidth | 10TB/month (~22,000 viewing hours @ 480p/1Mbps) |
+| Traffic stats | [pebble.xrift.net/stats](https://pebble.xrift.net/stats) |
 
 ## Streaming Specs
 

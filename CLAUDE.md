@@ -56,6 +56,7 @@ PC (H.264/480p/1Mbps) ─── RTMP ───→ Oracle Cloud ───→ Inte
 | リージョン | Japan East (Tokyo) |
 | 月額コスト | $0（無料枠） |
 | 帯域制限 | 10TB/月（無料枠） |
+| トラフィック統計 | https://pebble.xrift.net/stats |
 
 ### SSH接続
 
