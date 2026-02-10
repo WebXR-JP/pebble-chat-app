@@ -1,4 +1,5 @@
 import type { SetupStatus, StreamStatus } from '../../../shared/types'
+import { i18n } from '../i18n'
 
 // ストリームIDのバリデーション結果
 export interface StreamIdValidationResult {
@@ -12,10 +13,10 @@ export function validateStreamId(id: string): StreamIdValidationResult {
     return { valid: true } // 空欄はOK（ランダム生成される）
   }
   if (id.length < 3 || id.length > 20) {
-    return { valid: false, error: 'ストリームIDは3〜20文字で入力してください' }
+    return { valid: false, error: i18n.t('streamId.errorLength') }
   }
   if (!/^[a-zA-Z0-9-]+$/.test(id)) {
-    return { valid: false, error: 'ストリームIDは英数字とハイフンのみ使用できます' }
+    return { valid: false, error: i18n.t('streamId.errorChars') }
   }
   return { valid: true }
 }
@@ -52,17 +53,17 @@ export function getSetupStatusColor(status: SetupStatus): string {
 export function getStreamStatusText(status: StreamStatus): string {
   switch (status) {
     case 'idle':
-      return '待機中'
+      return i18n.t('status.idle')
     case 'starting':
-      return '起動中...'
+      return i18n.t('status.starting')
     case 'running':
-      return '配信中'
+      return i18n.t('status.running')
     case 'stopping':
-      return '停止中...'
+      return i18n.t('status.stopping')
     case 'error':
-      return 'エラー'
+      return i18n.t('status.error')
     default:
-      return '不明'
+      return i18n.t('status.unknown')
   }
 }
 
@@ -86,13 +87,13 @@ export function getConnectionStateText(state: RTCPeerConnectionState | null): st
   if (!state) return null
   switch (state) {
     case 'connecting':
-      return '接続中...'
+      return i18n.t('connection.connecting')
     case 'connected':
-      return '配信中'
+      return i18n.t('connection.connected')
     case 'disconnected':
-      return '切断'
+      return i18n.t('connection.disconnected')
     case 'failed':
-      return '接続失敗'
+      return i18n.t('connection.failed')
     default:
       return state
   }
@@ -101,9 +102,9 @@ export function getConnectionStateText(state: RTCPeerConnectionState | null): st
 // ストリームボタンのテキストを取得
 export function getStreamButtonText(isLoading: boolean, isStreaming: boolean): string {
   if (isLoading) {
-    return isStreaming ? '停止中...' : '開始中...'
+    return isStreaming ? i18n.t('button.stopping') : i18n.t('button.starting')
   }
-  return isStreaming ? '配信停止' : '配信開始'
+  return isStreaming ? i18n.t('button.stop') : i18n.t('button.start')
 }
 
 // RTMP URL分割結果

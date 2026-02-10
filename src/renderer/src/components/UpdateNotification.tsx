@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { UpdateInfo } from '../../../shared/types'
 
 interface Props {
@@ -8,6 +9,8 @@ interface Props {
 }
 
 export function UpdateNotification({ updateInfo, onDownload, onDismiss }: Props) {
+  const { t } = useTranslation()
+
   const handleDownload = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
@@ -27,11 +30,11 @@ export function UpdateNotification({ updateInfo, onDownload, onDismiss }: Props)
   return (
     <div style={styles.bar}>
       <span style={styles.text}>
-        v{updateInfo.latestVersion} が利用可能です
+        {t('update.available', { version: updateInfo.latestVersion })}
       </span>
       <div style={styles.actions}>
         <button style={styles.downloadButton} onClick={handleDownload}>
-          ダウンロード
+          {t('button.download')}
         </button>
         <button style={styles.dismissButton} onClick={handleDismiss}>
           ✕

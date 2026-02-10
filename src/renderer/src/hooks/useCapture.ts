@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { CaptureSource, CaptureInfo, ScreenRecordingPermission } from '../../../shared/types'
 import { WHIPClient } from '../lib/whip'
 import { DEFAULT_CAPTURE_SOURCES, DEFAULT_CAPTURE_INFO } from '../constants/defaults'
+import { i18n } from '../i18n'
 
 interface UseCaptureResult {
   sources: CaptureSource[]
@@ -50,7 +51,7 @@ export function useCapture(): UseCaptureResult {
       setSources(result.sources)
       setPermission(result.permission)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'ソース取得に失敗しました')
+      setError(err instanceof Error ? err.message : i18n.t('error.fetchSources'))
     } finally {
       setIsLoading(false)
     }
@@ -61,7 +62,7 @@ export function useCapture(): UseCaptureResult {
     try {
       await window.electronAPI.openScreenRecordingSettings()
     } catch (err) {
-      setError(err instanceof Error ? err.message : '設定を開けませんでした')
+      setError(err instanceof Error ? err.message : i18n.t('error.openSettings'))
     }
   }, [])
 
@@ -95,7 +96,7 @@ export function useCapture(): UseCaptureResult {
         onConnectionStateChange: (state) => {
           setConnectionState(state)
           if (state === 'failed' || state === 'disconnected') {
-            setError('WebRTC接続が切断されました')
+            setError(i18n.t('error.webrtcDisconnected'))
           }
         },
         onError: (err) => {
@@ -106,7 +107,7 @@ export function useCapture(): UseCaptureResult {
       whipClientRef.current = whipClient
       await whipClient.publish(stream)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'キャプチャ開始に失敗しました')
+      setError(err instanceof Error ? err.message : i18n.t('error.captureStart'))
       await stopCapture()
     } finally {
       setIsLoading(false)
@@ -135,7 +136,7 @@ export function useCapture(): UseCaptureResult {
       setConnectionState(null)
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'キャプチャ停止に失敗しました')
+      setError(err instanceof Error ? err.message : i18n.t('error.captureStop'))
     } finally {
       setIsLoading(false)
     }

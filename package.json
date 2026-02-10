@@ -1,6 +1,6 @@
 {
   "name": "pebble-chat",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "VRChat向けの簡単配信アプリ - PebbleChat",
   "main": "./out/main/index.js",
   "author": "WebXR-JP",
@@ -24,6 +24,9 @@
   "dependencies": {
     "@sentry/electron": "^7.7.1",
     "cloudflared": "^0.7.1",
+    "i18next": "^25.8.4",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "react-i18next": "^16.5.4",
     "tar": "^7.0.0",
     "unzipper": "^0.12.0"
   },

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { StreamInfo } from '../../../shared/types'
 
 // スケルトンアニメーション用のスタイルを動的に追加
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export function UrlDisplay({ streamInfo }: Props) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState<string | null>(null)
   const isError = streamInfo.status === 'error'
   const isLoading = !isError && (!streamInfo.readyForPlayback || !streamInfo.publicUrl)
@@ -53,10 +55,10 @@ export function UrlDisplay({ streamInfo }: Props) {
   if (isError) {
     return (
       <div style={styles.container}>
-        <h3 style={styles.title}>公開URL</h3>
+        <h3 style={styles.title}>{t('url.publicTitle')}</h3>
         <div style={styles.section}>
           <div style={styles.errorBox}>
-            公開URLを取得できませんでした
+            {t('url.fetchError')}
           </div>
         </div>
       </div>
@@ -66,7 +68,7 @@ export function UrlDisplay({ streamInfo }: Props) {
   if (isLoading) {
     return (
       <div style={styles.container}>
-        <h3 style={styles.title}>公開URL</h3>
+        <h3 style={styles.title}>{t('url.publicTitle')}</h3>
         <div style={styles.section}>
           <div style={styles.skeletonLabel} className="skeleton-shimmer" />
           <div style={styles.skeletonUrl} className="skeleton-shimmer" />
@@ -77,14 +79,14 @@ export function UrlDisplay({ streamInfo }: Props) {
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}>公開URL</h3>
+      <h3 style={styles.title}>{t('url.publicTitle')}</h3>
 
       <div style={styles.section}>
-        <label style={styles.label}>公開URL (iwaSync用):</label>
+        <label style={styles.label}>{t('url.publicLabel')}</label>
         <div style={styles.urlRow}>
           <code style={styles.url}>{streamInfo.publicUrl}</code>
           <button style={styles.copyButton} onClick={handleCopyPublicUrl}>
-            {copied === 'public' ? 'コピー済み' : 'コピー'}
+            {copied === 'public' ? t('button.copied') : t('button.copy')}
           </button>
         </div>
       </div>

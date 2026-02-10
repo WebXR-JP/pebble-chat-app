@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import logoImage from './assets/logo.png'
 import { SetupProgress } from './components/SetupProgress'
 import { ObsStreamingScreen } from './components/ObsStreamingScreen'
 import { DirectStreamingScreen } from './components/DirectStreamingScreen'
 import { SourceSelectModal } from './components/SourceSelectModal'
 import { UpdateNotification } from './components/UpdateNotification'
+import { LanguageSelector } from './components/LanguageSelector'
 import { useSetup } from './hooks/useSetup'
 import { useStreaming } from './hooks/useStreaming'
 import { useCapture } from './hooks/useCapture'
@@ -18,6 +20,7 @@ type AppState = 'idle' | 'selecting' | 'streaming'
 const STORAGE_KEY = 'pebble-stream-id'
 
 function App() {
+  const { t } = useTranslation()
   const setup = useSetup()
   const streaming = useStreaming()
   const capture = useCapture()
@@ -130,14 +133,14 @@ function App() {
           <button
             style={styles.windowControlButton}
             onClick={handleMinimize}
-            title="最小化"
+            title={t('window.minimize')}
           >
             &#x2212;
           </button>
           <button
             style={{ ...styles.windowControlButton, ...styles.closeButton }}
             onClick={handleClose}
-            title="閉じる"
+            title={t('window.close')}
           >
             &#x2715;
           </button>
@@ -150,7 +153,7 @@ function App() {
           paddingTop: platform === 'win32' ? '8px' : '32px'
         }}>
           <img src={logoImage} alt="PebbleChat" style={styles.logo} />
-          <p style={styles.subtitle}>VRChat/XRift 向け配信アプリ <span style={styles.version}>v{__APP_VERSION__}</span></p>
+          <p style={styles.subtitle}>{t('app.subtitle')} <span style={styles.version}>v{__APP_VERSION__}</span></p>
         </header>
       )}
 
@@ -170,12 +173,12 @@ function App() {
           <div style={styles.idleScreen}>
             {/* ストリームID入力 */}
             <div style={styles.streamIdSection}>
-              <label style={styles.streamIdLabel}>ストリームID（任意）</label>
+              <label style={styles.streamIdLabel}>{t('streamId.label')}</label>
               <input
                 type="text"
                 value={customStreamId}
                 onChange={handleStreamIdChange}
-                placeholder="空欄でランダム生成"
+                placeholder={t('streamId.placeholder')}
                 style={{
                   ...styles.streamIdInput,
                   ...(streamIdError ? styles.streamIdInputError : {})
@@ -184,7 +187,7 @@ function App() {
               {streamIdError ? (
                 <span style={styles.streamIdErrorText}>{streamIdError}</span>
               ) : (
-                <span style={styles.streamIdHint}>英数字とハイフンのみ、3〜20文字</span>
+                <span style={styles.streamIdHint}>{t('streamId.hint')}</span>
               )}
             </div>
 
@@ -198,8 +201,8 @@ function App() {
                   onChange={handleSelectDirectMode}
                 />
                 <div style={styles.modeContent}>
-                  <span style={styles.modeName}>直接配信</span>
-                  <span style={styles.modeDesc}>アプリから直接画面をキャプチャ（推奨）</span>
+                  <span style={styles.modeName}>{t('mode.direct')}</span>
+                  <span style={styles.modeDesc}>{t('mode.directDesc')}</span>
                 </div>
               </label>
               <label style={styles.modeOption}>
@@ -210,8 +213,8 @@ function App() {
                   onChange={handleSelectObsMode}
                 />
                 <div style={styles.modeContent}>
-                  <span style={styles.modeName}>OBS経由</span>
-                  <span style={styles.modeDesc}>OBSで配信設定をカスタマイズ</span>
+                  <span style={styles.modeName}>{t('mode.obs')}</span>
+                  <span style={styles.modeDesc}>{t('mode.obsDesc')}</span>
                 </div>
               </label>
             </div>
@@ -222,8 +225,13 @@ function App() {
               onClick={handleStartClick}
               disabled={isLoading}
             >
-              {isLoading ? '準備中...' : '配信開始'}
+              {isLoading ? t('button.preparing') : t('button.start')}
             </button>
+
+            {/* 言語切替 */}
+            <div style={styles.langSelectorRow}>
+              <LanguageSelector />
+            </div>
           </div>
         )}
 
@@ -349,6 +357,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     paddingTop: '32px',  // タイトルバー分のスペース
     // @ts-expect-error: WebKit specific property for draggable region
     WebkitAppRegion: 'drag'
+  },
+  langSelectorRow: {
+    display: 'flex',
+    justifyContent: 'center'
   },
   logo: {
     height: '64px'

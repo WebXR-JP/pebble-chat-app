@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { StreamInfo } from '../../../shared/types'
 import { getStreamStatusText, getStreamStatusColor } from '../utils/formatters'
 
@@ -6,10 +7,12 @@ interface Props {
 }
 
 export function StatusDisplay({ streamInfo }: Props) {
+  const { t } = useTranslation()
+
   return (
     <div style={styles.container}>
       <div style={styles.statusRow}>
-        <span style={styles.label}>ステータス:</span>
+        <span style={styles.label}>{t('status.label')}</span>
         <span style={{ ...styles.status, color: getStreamStatusColor(streamInfo.status) }}>
           {getStreamStatusText(streamInfo.status)}
         </span>

@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CaptureSource } from '../../../shared/types'
 import { getConnectionStateText } from '../utils/formatters'
 
@@ -25,6 +26,8 @@ export function CaptureSourceSelector({
   onStartCapture,
   onStopCapture
 }: Props) {
+  const { t } = useTranslation()
+
   // 初回マウント時にソース一覧を取得
   useEffect(() => {
     onRefresh()
@@ -42,13 +45,13 @@ export function CaptureSourceSelector({
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h3 style={styles.title}>キャプチャソース</h3>
+        <h3 style={styles.title}>{t('source.captureTitle')}</h3>
         <button
           style={styles.refreshButton}
           onClick={onRefresh}
           disabled={isLoading || isCapturing}
         >
-          更新
+          {t('button.refresh')}
         </button>
       </div>
 
@@ -67,7 +70,7 @@ export function CaptureSourceSelector({
       <div style={styles.sourceList}>
         {sources.length === 0 ? (
           <p style={styles.emptyText}>
-            {isLoading ? '読み込み中...' : 'キャプチャソースが見つかりません'}
+            {isLoading ? t('source.loading') : t('source.emptyCapture')}
           </p>
         ) : (
           sources.map((source) => (
@@ -95,7 +98,7 @@ export function CaptureSourceSelector({
               <div style={styles.sourceInfo}>
                 <span style={styles.sourceName}>{source.name}</span>
                 <span style={styles.sourceType}>
-                  {source.type === 'screen' ? '画面' : 'ウィンドウ'}
+                  {source.type === 'screen' ? t('source.tabScreen') : t('source.tabWindow')}
                 </span>
               </div>
             </div>
@@ -110,7 +113,7 @@ export function CaptureSourceSelector({
             onClick={onStopCapture}
             disabled={isLoading}
           >
-            {isLoading ? '停止中...' : 'キャプチャ停止'}
+            {isLoading ? t('button.stopping') : t('button.captureStop')}
           </button>
         ) : (
           <button
@@ -122,7 +125,7 @@ export function CaptureSourceSelector({
             onClick={onStartCapture}
             disabled={!selectedSourceId || isLoading}
           >
-            {isLoading ? '開始中...' : 'キャプチャ開始'}
+            {isLoading ? t('button.starting') : t('button.captureStart')}
           </button>
         )}
       </div>

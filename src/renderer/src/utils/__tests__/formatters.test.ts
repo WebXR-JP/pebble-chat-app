@@ -1,4 +1,39 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// i18n モック（formatters.ts が import する前にモック設定）
+vi.mock('../../i18n', () => {
+  const t = (key: string): string => {
+    const translations: Record<string, string> = {
+      'streamId.errorLength': 'ストリームIDは3〜20文字で入力してください',
+      'streamId.errorChars': 'ストリームIDは英数字とハイフンのみ使用できます',
+      'status.idle': '待機中',
+      'status.starting': '起動中...',
+      'status.running': '配信中',
+      'status.stopping': '停止中...',
+      'status.error': 'エラー',
+      'status.unknown': '不明',
+      'connection.connecting': '接続中...',
+      'connection.connected': '配信中',
+      'connection.disconnected': '切断',
+      'connection.failed': '接続失敗',
+      'button.stopping': '停止中...',
+      'button.starting': '開始中...',
+      'button.stop': '配信停止',
+      'button.start': '配信開始'
+    }
+    return translations[key] ?? key
+  }
+  return {
+    i18n: {
+      t,
+      language: 'ja',
+      changeLanguage: vi.fn(),
+      use: vi.fn().mockReturnThis(),
+      init: vi.fn()
+    }
+  }
+})
+
 import {
   validateStreamId,
   getSetupStatusIcon,
@@ -9,6 +44,10 @@ import {
   getStreamButtonText,
   parseRtmpUrl
 } from '../formatters'
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
 describe('validateStreamId', () => {
   it('空文字列は有効（ランダム生成される）', () => {

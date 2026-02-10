@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { SetupProgress as SetupProgressType } from '../../../shared/types'
 import { getSetupStatusIcon, getSetupStatusColor } from '../utils/formatters'
 
@@ -9,9 +10,11 @@ interface Props {
 }
 
 export function SetupProgress({ progress, isLoading, error, onInstall }: Props) {
+  const { t } = useTranslation()
+
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>セットアップ</h2>
+      <h2 style={styles.title}>{t('setup.title')}</h2>
 
       <div style={styles.items}>
         <div style={styles.item}>
@@ -29,13 +32,13 @@ export function SetupProgress({ progress, isLoading, error, onInstall }: Props) 
         </div>
       </div>
 
-      <p style={styles.message}>{progress.message}</p>
+      <p style={styles.message}>{t(progress.message as 'setup.checking')}</p>
 
       {error && <p style={styles.error}>{error}</p>}
 
       {error && !isLoading && (
         <button style={styles.button} onClick={onInstall}>
-          リトライ
+          {t('button.retry')}
         </button>
       )}
     </div>
