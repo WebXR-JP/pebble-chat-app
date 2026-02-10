@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { StreamInfo, Platform } from '../../../shared/types'
 import { parseRtmpUrl } from '../utils/formatters'
 
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export function ObsStreamingScreen({ streamInfo, onStop, isLoading, platform }: Props) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
@@ -83,36 +85,36 @@ export function ObsStreamingScreen({ streamInfo, onStop, isLoading, platform }: 
             }}
           />
           <span style={styles.statusText}>
-            {isStreamReady ? '配信中' : 'OBS接続待ち'}
+            {isStreamReady ? t('status.running') : t('status.waitingObs')}
           </span>
         </div>
       </div>
 
       {/* OBS設定情報（常に表示） */}
       <div style={styles.obsSettingsCard}>
-        <h3 style={styles.cardTitle}>OBS設定</h3>
+        <h3 style={styles.cardTitle}>{t('obs.settingsTitle')}</h3>
         <p style={styles.obsDescription}>
-          OBSの「設定 &gt; 配信」で以下を入力し、「配信開始」を押してください
+          {t('obs.description')}
         </p>
 
         {rtmpParts ? (
           <>
             <div style={styles.section}>
-              <label style={styles.label}>サーバー:</label>
+              <label style={styles.label}>{t('obs.server')}</label>
               <div style={styles.urlRow}>
                 <code style={styles.url}>{rtmpParts.serverUrl}</code>
                 <button style={styles.copyButton} onClick={handleCopyServerUrl}>
-                  {copied === 'server' ? 'コピー済み' : 'コピー'}
+                  {copied === 'server' ? t('button.copied') : t('button.copy')}
                 </button>
               </div>
             </div>
 
             <div style={styles.section}>
-              <label style={styles.label}>ストリームキー:</label>
+              <label style={styles.label}>{t('obs.streamKey')}</label>
               <div style={styles.urlRow}>
                 <code style={styles.url}>{rtmpParts.streamKey}</code>
                 <button style={styles.copyButton} onClick={handleCopyStreamKey}>
-                  {copied === 'key' ? 'コピー済み' : 'コピー'}
+                  {copied === 'key' ? t('button.copied') : t('button.copy')}
                 </button>
               </div>
             </div>
@@ -133,14 +135,14 @@ export function ObsStreamingScreen({ streamInfo, onStop, isLoading, platform }: 
 
       {/* 公開URL */}
       <div style={styles.publicUrlCard}>
-        <h3 style={styles.cardTitle}>公開URL</h3>
+        <h3 style={styles.cardTitle}>{t('url.publicTitle')}</h3>
         {isStreamReady ? (
           <div style={styles.section}>
-            <label style={styles.label}>公開URL (iwaSync用):</label>
+            <label style={styles.label}>{t('url.publicLabel')}</label>
             <div style={styles.urlRow}>
               <code style={styles.url}>{streamInfo.publicUrl}</code>
               <button style={styles.copyButton} onClick={handleCopyPublicUrl}>
-                {copied === 'public' ? 'コピー済み' : 'コピー'}
+                {copied === 'public' ? t('button.copied') : t('button.copy')}
               </button>
             </div>
           </div>
@@ -155,18 +157,18 @@ export function ObsStreamingScreen({ streamInfo, onStop, isLoading, platform }: 
       {/* 注意書き */}
       <div style={styles.notice}>
         <span style={styles.noticeText}>
-          無料サーバーで運用中のため、遅延4秒以上・画質480pでの配信となります
+          {t('streaming.notice')}
         </span>
       </div>
 
       {/* 停止ボタン */}
       {isLoading ? (
         <button style={styles.connectingButton} disabled>
-          接続中...
+          {t('button.connecting')}
         </button>
       ) : (
         <button style={styles.stopButton} onClick={onStop}>
-          配信停止
+          {t('button.stop')}
         </button>
       )}
     </div>

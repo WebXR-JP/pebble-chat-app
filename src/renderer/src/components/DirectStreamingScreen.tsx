@@ -1,22 +1,23 @@
+import { useTranslation } from 'react-i18next'
 import type { StreamInfo, CaptureSource, Platform, PipelineStageStatus } from '../../../shared/types'
 import { UrlDisplay } from './UrlDisplay'
 
 // パイプライン段階の定義
 interface PipelineStage {
   key: string
-  label: string
+  labelKey: string
   getStatus: (streamInfo: StreamInfo, connectionState: RTCPeerConnectionState | null) => PipelineStageStatus
 }
 
 const PIPELINE_STAGES: PipelineStage[] = [
   {
     key: 'mediamtx',
-    label: 'MediaMTX',
+    labelKey: 'MediaMTX',
     getStatus: (streamInfo) => streamInfo.pipelineStatus?.mediamtx ?? 'pending'
   },
   {
     key: 'whip',
-    label: 'WHIP',
+    labelKey: 'WHIP',
     getStatus: (_streamInfo, connectionState) => {
       if (!connectionState) return 'pending'
       if (connectionState === 'connected') return 'connected'
@@ -26,12 +27,12 @@ const PIPELINE_STAGES: PipelineStage[] = [
   },
   {
     key: 'rtmp',
-    label: 'サーバー接続',
+    labelKey: 'pipeline.serverConnection',
     getStatus: (streamInfo) => streamInfo.pipelineStatus?.rtmp ?? 'pending'
   },
   {
     key: 'hls',
-    label: 'HLS配信',
+    labelKey: 'pipeline.hlsDelivery',
     getStatus: (streamInfo) => streamInfo.pipelineStatus?.hls ?? 'pending'
   }
 ]
@@ -83,6 +84,7 @@ export function DirectStreamingScreen({
   isCapturing,
   platform
 }: Props) {
+  const { t } = useTranslation()
   const isError = streamInfo.status === 'error'
 
   const getStatusColor = (): string => {
@@ -94,15 +96,21 @@ export function DirectStreamingScreen({
   }
 
   const getStatusText = (): string => {
-    if (isError) return 'エラー'
+    if (isError) return t('status.error')
     if (connectionState === 'connected') {
-      return streamInfo.readyForPlayback ? '配信中' : '準備中...'
+      return streamInfo.readyForPlayback ? t('status.running') : t('status.preparing')
     }
-    return '接続中...'
+    return t('button.connecting')
   }
 
   // パイプラインが表示可能か（starting or running or error のとき）
   const showPipeline = streamInfo.status === 'starting' || streamInfo.status === 'running' || isError
+
+  // パイプラインラベルの解決（翻訳キーかそのまま表示か）
+  const getStageLabelText = (labelKey: string): string => {
+    if (labelKey.includes('.')) return t(labelKey as 'pipeline.serverConnection')
+    return labelKey
+  }
 
   return (
     <div style={{
@@ -151,7 +159,7 @@ export function DirectStreamingScreen({
                     ...styles.pipelineLabel,
                     color: getStageColor(status)
                   }}>
-                    {stage.label}
+                    {getStageLabelText(stage.labelKey)}
                   </span>
                 </div>
               )
@@ -176,7 +184,7 @@ export function DirectStreamingScreen({
             <div style={styles.previewInfo}>
               <span style={styles.previewName}>{selectedSource.name}</span>
               <span style={styles.previewType}>
-                {selectedSource.type === 'screen' ? '画面' : 'ウィンドウ'}
+                {selectedSource.type === 'screen' ? t('source.tabScreen') : t('source.tabWindow')}
               </span>
             </div>
           </div>
@@ -189,18 +197,18 @@ export function DirectStreamingScreen({
       {/* 注意書き */}
       <div style={styles.notice}>
         <span style={styles.noticeText}>
-          無料サーバーで運用中のため、遅延4秒以上・画質480pでの配信となります
+          {t('streaming.notice')}
         </span>
       </div>
 
       {/* 停止/接続中ボタン */}
       {isLoading && !isCapturing ? (
         <button style={styles.connectingButton} disabled>
-          接続中...
+          {t('button.connecting')}
         </button>
       ) : (
         <button style={styles.stopButton} onClick={onStop}>
-          配信停止
+          {t('button.stop')}
         </button>
       )}
     </div>

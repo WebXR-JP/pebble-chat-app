@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { getStreamButtonText } from '../utils/formatters'
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export function StreamControls({ isStreaming, isLoading, isReady, onStart, onStop }: Props) {
+  const { t } = useTranslation()
+
   return (
     <div style={styles.container}>
       <button
@@ -23,7 +26,7 @@ export function StreamControls({ isStreaming, isLoading, isReady, onStart, onSto
         {getStreamButtonText(isLoading, isStreaming)}
       </button>
 
-      {!isReady && <p style={styles.hint}>セットアップを完了してください</p>}
+      {!isReady && <p style={styles.hint}>{t('hint.setupRequired')}</p>}
     </div>
   )
 }

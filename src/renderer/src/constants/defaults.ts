@@ -3,7 +3,7 @@ import type { SetupProgress, CaptureSource, CaptureInfo, StreamInfo, UpdateInfo 
 export const DEFAULT_SETUP_PROGRESS: SetupProgress = {
   mediamtx: 'pending',
   ffmpeg: 'pending',
-  message: '確認中...'
+  message: 'setup.checking'
 }
 
 export const DEFAULT_CAPTURE_SOURCES: CaptureSource[] = []

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CaptureSource, ScreenRecordingPermission } from '../../../shared/types'
 
 type TabType = 'screen' | 'window'
@@ -22,6 +23,7 @@ export function SourceSelectModal({
   onCancel,
   onOpenSettings
 }: Props) {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabType>('screen')
 
   // 権限がない場合のメッセージ
@@ -56,22 +58,20 @@ export function SourceSelectModal({
         <div style={styles.permissionModal} onClick={handleModalClick}>
           <div style={styles.permissionContainer}>
             <div style={styles.permissionIcon}>!</div>
-            <h4 style={styles.permissionTitle}>画面収録の権限が必要です</h4>
+            <h4 style={styles.permissionTitle}>{t('permission.title')}</h4>
             <p style={styles.permissionText}>
-              このアプリで画面をキャプチャするには、
-              <br />
-              システム設定で権限を許可してください。
+              {t('permission.description')}
             </p>
             <button style={styles.settingsButton} onClick={onOpenSettings}>
-              システム設定を開く
+              {t('button.openSettings')}
             </button>
             <p style={styles.permissionNote}>
-              設定後、このアプリを再起動してください。
+              {t('permission.note')}
             </p>
           </div>
           <div style={styles.footer}>
             <button style={styles.cancelButton} onClick={onCancel}>
-              キャンセル
+              {t('button.cancel')}
             </button>
           </div>
         </div>
@@ -83,15 +83,15 @@ export function SourceSelectModal({
     <div style={styles.overlay} onClick={onCancel}>
       <div style={styles.modal} onClick={handleModalClick}>
         <div style={styles.header}>
-          <h3 style={styles.title}>キャプチャするソースを選択</h3>
+          <h3 style={styles.title}>{t('source.selectTitle')}</h3>
           <button style={styles.refreshButton} onClick={onRefresh} disabled={isLoading}>
-            更新
+            {t('button.refresh')}
           </button>
         </div>
 
         {isLoading ? (
           <div style={styles.loadingContainer}>
-            <p style={styles.loadingText}>読み込み中...</p>
+            <p style={styles.loadingText}>{t('source.loading')}</p>
           </div>
         ) : (
           <>
@@ -104,7 +104,7 @@ export function SourceSelectModal({
                 }}
                 onClick={handleSelectScreenTab}
               >
-                画面
+                {t('source.tabScreen')}
               </button>
               <button
                 style={{
@@ -113,13 +113,15 @@ export function SourceSelectModal({
                 }}
                 onClick={handleSelectWindowTab}
               >
-                ウィンドウ
+                {t('source.tabWindow')}
               </button>
             </div>
 
             <div style={styles.sourceList}>
               {filteredSources.length === 0 ? (
-                <p style={styles.emptyText}>{activeTab === 'screen' ? '画面' : 'ウィンドウ'}が見つかりません</p>
+                <p style={styles.emptyText}>
+                  {activeTab === 'screen' ? t('source.emptyScreen') : t('source.emptyWindow')}
+                </p>
               ) : (
                 filteredSources.map((source) => (
                   <div
@@ -150,7 +152,7 @@ export function SourceSelectModal({
 
         <div style={styles.footer}>
           <button style={styles.cancelButton} onClick={onCancel}>
-            キャンセル
+            {t('button.cancel')}
           </button>
         </div>
       </div>
@@ -343,7 +345,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     margin: '0 0 22px 0',
     fontSize: '13px',
     color: colors.textSecondary,
-    lineHeight: 1.6
+    lineHeight: 1.6,
+    whiteSpace: 'pre-line'
   },
   settingsButton: {
     padding: '12px 24px',
