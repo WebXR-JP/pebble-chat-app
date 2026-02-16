@@ -66,6 +66,14 @@ ssh pebble-relay
 ssh ubuntu@161.33.189.110
 ```
 
+### 配信中ユーザーの確認
+
+```bash
+ssh pebble-relay "ss -tn sport = :1935 | grep -c ESTAB"
+```
+
+RTMP接続数（＝配信中のユーザー数）が返る。デプロイ前に0であることを確認する。
+
 ### 開放ポート
 
 | ポート | プロトコル | 用途 |

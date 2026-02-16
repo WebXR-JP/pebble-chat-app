@@ -150,6 +150,16 @@ ansible -i inventory.yml pebble-relay -m ping
 ansible-playbook -i inventory.yml playbook.yml
 ```
 
+### 配信中ユーザーの確認
+
+デプロイ前に配信中のユーザーがいないことを確認する:
+
+```bash
+ssh pebble-relay "ss -tn sport = :1935 | grep -c ESTAB"
+```
+
+0 が返れば安全にデプロイ可能。
+
 ## 関連リンク
 
 - [XRift](https://xrift.jp) - WebXRベースのメタバース
