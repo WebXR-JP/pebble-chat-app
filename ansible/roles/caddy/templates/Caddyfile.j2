@@ -10,7 +10,10 @@ pebble.xrift.net {
     }
 
     # HLS配信（MediaMTXからプロキシ）- 任意のストリームIDに対応
-    reverse_proxy /* localhost:{{ mediamtx_port_hls }}
+    # flush_interval -1: LL-HLSのchunked transferをバッファリングせず即時転送
+    reverse_proxy /* localhost:{{ mediamtx_port_hls }} {
+        flush_interval -1
+    }
 
     # MIMEタイプを強制上書き（deferでレスポンス後に適用）
     @m3u8 path *.m3u8
@@ -22,6 +25,12 @@ pebble.xrift.net {
     @ts path *.ts
     header @ts {
         Content-Type "video/mp2t"
+        defer
+    }
+
+    @mp4 path *.mp4
+    header @mp4 {
+        Content-Type "video/mp4"
         defer
     }
 
