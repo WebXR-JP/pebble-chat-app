@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, MouseEvent } from 'react'
+import { useEffect, useState, useCallback, ChangeEvent, MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CaptureSource, ScreenRecordingPermission } from '../../../shared/types'
+import { CaptureSource, Platform, ScreenRecordingPermission } from '../../../shared/types'
 
 type TabType = 'screen' | 'window'
 
@@ -8,8 +8,9 @@ interface Props {
   sources: CaptureSource[]
   isLoading: boolean
   permission: ScreenRecordingPermission
+  platform: Platform | null
   onRefresh: () => void
-  onSelect: (sourceId: string) => void
+  onSelect: (sourceId: string, enableAudio: boolean) => void
   onCancel: () => void
   onOpenSettings: () => void
 }
@@ -18,6 +19,7 @@ export function SourceSelectModal({
   sources,
   isLoading,
   permission,
+  platform,
   onRefresh,
   onSelect,
   onCancel,
@@ -25,6 +27,7 @@ export function SourceSelectModal({
 }: Props) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabType>('screen')
+  const [enableAudio, setEnableAudio] = useState(true)
 
   // 権限がない場合のメッセージ
   const needsPermission = permission !== 'granted' && permission !== 'unknown'
@@ -45,6 +48,19 @@ export function SourceSelectModal({
   const handleSelectWindowTab = useCallback(() => {
     setActiveTab('window')
   }, [])
+
+  // 音声共有チェックボックスハンドラ
+  const handleAudioChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setEnableAudio(e.target.checked)
+  }, [])
+
+  // ソース選択ハンドラ
+  const handleSelect = useCallback(
+    (sourceId: string) => {
+      onSelect(sourceId, enableAudio)
+    },
+    [onSelect, enableAudio]
+  )
 
   // モーダルクリック時のイベント伝播停止
   const handleModalClick = useCallback((e: MouseEvent) => {
@@ -127,7 +143,7 @@ export function SourceSelectModal({
                   <div
                     key={source.id}
                     style={styles.sourceItem}
-                    onClick={() => onSelect(source.id)}
+                    onClick={() => handleSelect(source.id)}
                   >
                     {source.thumbnail ? (
                       <img
@@ -148,6 +164,21 @@ export function SourceSelectModal({
               )}
             </div>
           </>
+        )}
+
+        {/* 音声共有チェックボックス（Windows のみ） */}
+        {platform === 'win32' && (
+          <div style={styles.audioOption}>
+            <label style={styles.audioLabel}>
+              <input
+                type="checkbox"
+                checked={enableAudio}
+                onChange={handleAudioChange}
+                style={styles.audioCheckbox}
+              />
+              <span style={styles.audioText}>{t('audio.shareSystem')}</span>
+            </label>
+          </div>
         )}
 
         <div style={styles.footer}>
@@ -415,6 +446,28 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '11px',
     color: colors.textMuted,
     fontWeight: 500
+  },
+  audioOption: {
+    padding: '10px 18px',
+    borderTop: `1px solid ${colors.border}`,
+    backgroundColor: colors.bgPrimary
+  },
+  audioLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer'
+  },
+  audioCheckbox: {
+    width: '16px',
+    height: '16px',
+    cursor: 'pointer',
+    accentColor: colors.accent
+  },
+  audioText: {
+    fontSize: '13px',
+    fontWeight: 500,
+    color: colors.textPrimary
   },
   footer: {
     padding: '10px 18px',

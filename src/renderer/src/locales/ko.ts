@@ -71,6 +71,9 @@ export const ko = {
   'source.captureTitle': '캡처 소스',
   'source.emptyCapture': '캡처 소스를 찾을 수 없습니다',
 
+  // Audio
+  'audio.shareSystem': '시스템 오디오를 공유',
+
   // Permission
   'permission.title': '화면 녹화 권한이 필요합니다',
   'permission.description': '이 앱에서 화면을 캡처하려면\n시스템 설정에서 권한을 허용해 주세요.',
