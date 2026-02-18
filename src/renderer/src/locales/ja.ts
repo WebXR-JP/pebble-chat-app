@@ -71,9 +71,6 @@ export const ja = {
   'source.captureTitle': 'キャプチャソース',
   'source.emptyCapture': 'キャプチャソースが見つかりません',
 
-  // Audio
-  'audio.shareSystem': 'PCの音声を共有する',
-
   // Permission
   'permission.title': '画面収録の権限が必要です',
   'permission.description': 'このアプリで画面をキャプチャするには、\nシステム設定で権限を許可してください。',
