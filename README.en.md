@@ -21,6 +21,16 @@ A simple streaming app for VRChat / XRift. Issue a streaming URL with one button
 | macOS (Intel) | [PebbleChat-mac-x64.dmg](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/PebbleChat-mac-x64.dmg) |
 | Windows | [PebbleChat-win-x64.exe](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/PebbleChat-win-x64.exe) |
 
+### Beta
+
+Test builds with the latest features before the stable release.
+
+| OS | Download |
+|----|----------|
+| macOS (Apple Silicon) | [PebbleChat-mac-arm64-beta.dmg](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/beta/PebbleChat-mac-arm64-beta.dmg) |
+| macOS (Intel) | [PebbleChat-mac-x64-beta.dmg](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/beta/PebbleChat-mac-x64-beta.dmg) |
+| Windows | [PebbleChat-win-x64-beta.exe](https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/beta/PebbleChat-win-x64-beta.exe) |
+
 ## Background
 
 TopazChat, a live streaming service for VRChat, faces sustainability challenges due to being individually operated. PebbleChat aims to reduce the load on TopazChat by enabling each user to set up their own streaming server.
