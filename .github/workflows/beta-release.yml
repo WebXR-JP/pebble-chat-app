@@ -1,0 +1,167 @@
+name: Beta Release
+
+on:
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # macOS ビルド
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app (macOS)
+        run: npm run build && npx electron-builder --mac --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Rename artifacts to beta names
+        run: |
+          cd dist
+          for f in *-arm64.dmg; do [ -f "$f" ] && mv "$f" "PebbleChat-mac-arm64-beta.dmg"; done
+          for f in *.dmg; do [ -f "$f" ] && [[ "$f" != *-beta* ]] && mv "$f" "PebbleChat-mac-x64-beta.dmg"; done
+          ls -la *.dmg
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-artifacts
+          path: |
+            dist/PebbleChat-mac-*-beta.dmg
+          retention-days: 1
+
+  # Windows ビルド
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app (Windows)
+        run: npm run build && npx electron-builder --win --publish never
+
+      - name: Rename artifacts to beta names
+        shell: bash
+        run: |
+          cd dist
+          for f in *.exe; do [ -f "$f" ] && mv "$f" "PebbleChat-win-x64-beta.exe"; break; done
+          ls -la *.exe
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-artifacts
+          path: |
+            dist/PebbleChat-win-x64-beta.exe
+          retention-days: 1
+
+  # R2 にアップロード（beta パス）
+  upload-to-r2:
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Setup rclone
+        run: |
+          curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip
+          unzip rclone-current-linux-amd64.zip
+          sudo mv rclone-*-linux-amd64/rclone /usr/local/bin/
+          rclone version
+
+      - name: Configure rclone for R2
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          acl = private
+          EOF
+
+      - name: Generate version-beta.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          BRANCH_NAME="${GITHUB_REF_NAME}"
+          COMMIT_SHA="${GITHUB_SHA:0:7}"
+          RELEASE_DATE=$(date -u +%Y-%m-%d)
+          R2_BASE="https://pub-6e0518c74c774e0f9982db12e9536191.r2.dev/releases/beta"
+          cat > version-beta.json << EOF
+          {
+            "version": "${VERSION}-beta",
+            "branch": "${BRANCH_NAME}",
+            "commit": "${COMMIT_SHA}",
+            "releaseDate": "${RELEASE_DATE}",
+            "downloads": {
+              "mac-arm64": "${R2_BASE}/PebbleChat-mac-arm64-beta.dmg",
+              "mac-x64": "${R2_BASE}/PebbleChat-mac-x64-beta.dmg",
+              "win-x64": "${R2_BASE}/PebbleChat-win-x64-beta.exe"
+            }
+          }
+          EOF
+          echo "Generated version-beta.json:"
+          cat version-beta.json
+
+      - name: Prepare upload directory
+        run: |
+          mkdir -p upload/releases/beta
+          cp artifacts/mac-artifacts/*.dmg upload/releases/beta/
+          cp artifacts/win-artifacts/*.exe upload/releases/beta/
+          cp version-beta.json upload/releases/beta/
+          echo "Files to upload:"
+          ls -la upload/releases/beta/
+
+      - name: Upload to R2
+        run: |
+          rclone copy upload/releases/beta/ r2:${{ secrets.R2_BUCKET_NAME }}/releases/beta/ --progress
+
+      - name: Summary
+        run: |
+          echo "## Beta Upload Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Branch: \`${GITHUB_REF_NAME}\` | Commit: \`${GITHUB_SHA:0:7}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Uploaded files:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          ls -la upload/releases/beta/ >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### R2 paths:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`releases/beta/PebbleChat-mac-x64-beta.dmg\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`releases/beta/PebbleChat-mac-arm64-beta.dmg\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`releases/beta/PebbleChat-win-x64-beta.exe\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`releases/beta/version-beta.json\`" >> $GITHUB_STEP_SUMMARY

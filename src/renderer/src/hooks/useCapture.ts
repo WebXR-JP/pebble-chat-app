@@ -13,7 +13,7 @@ interface UseCaptureResult {
   connectionState: RTCPeerConnectionState | null
   permission: ScreenRecordingPermission
   refreshSources: () => Promise<void>
-  startCapture: (sourceId: string) => Promise<void>
+  startCapture: (sourceId: string, enableAudio: boolean) => Promise<void>
   stopCapture: () => Promise<void>
   openSettings: () => Promise<void>
 }
@@ -67,7 +67,7 @@ export function useCapture(): UseCaptureResult {
   }, [])
 
   // キャプチャ開始
-  const startCapture = useCallback(async (sourceId: string) => {
+  const startCapture = useCallback(async (sourceId: string, enableAudio: boolean) => {
     try {
       setIsLoading(true)
       setError(null)
@@ -75,9 +75,16 @@ export function useCapture(): UseCaptureResult {
       // メインプロセスにキャプチャ開始を通知
       await window.electronAPI.startCapture(sourceId)
 
+      // platform を取得
+      const platform = await window.electronAPI.getPlatform()
+
       // MediaStreamを取得
+      // Windows かつ enableAudio の場合のみシステム音声をキャプチャ
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
+        audio:
+          enableAudio && platform === 'win32'
+            ? ({ mandatory: { chromeMediaSource: 'desktop' } } as MediaTrackConstraints)
+            : false,
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
