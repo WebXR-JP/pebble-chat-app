@@ -78,7 +78,7 @@ function App() {
   }
 
   // ソース選択後、キャプチャ開始
-  const handleSourceSelect = async (sourceId: string, enableAudio: boolean) => {
+  const handleSourceSelect = async (sourceId: string) => {
     // 選択したソースを保存
     const source = capture.sources.find((s) => s.id === sourceId)
     setSelectedSource(source || null)
@@ -90,7 +90,7 @@ function App() {
     }
 
     // キャプチャ開始
-    await capture.startCapture(sourceId, enableAudio)
+    await capture.startCapture(sourceId)
   }
 
   // ソース選択キャンセル
@@ -267,7 +267,6 @@ function App() {
           sources={capture.sources}
           isLoading={capture.isLoading}
           permission={capture.permission}
-          platform={platform}
           onRefresh={capture.refreshSources}
           onSelect={handleSourceSelect}
           onCancel={handleCancelSelect}

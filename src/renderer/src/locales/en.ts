@@ -71,9 +71,6 @@ export const en = {
   'source.captureTitle': 'Capture Source',
   'source.emptyCapture': 'No capture sources found',
 
-  // Audio
-  'audio.shareSystem': 'Share system audio',
-
   // Permission
   'permission.title': 'Screen recording permission required',
   'permission.description': 'To capture the screen with this app,\nplease grant permission in System Settings.',
