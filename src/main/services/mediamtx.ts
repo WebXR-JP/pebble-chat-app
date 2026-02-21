@@ -76,20 +76,40 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
     // エラー出力を監視
     // 注意: FFmpegはバージョン情報などをstderrに出力するため、すべてがエラーではない
     // また、正常終了時のメッセージもstderrに出力される
-    mediamtxProcess.stderr?.on('data', (data: Buffer) => {
-      const output = data.toString()
+    // Node.jsのdataイベントは行境界を保証しないため、行バッファリングで完全な行単位で処理する
+    let stderrBuffer = ''
 
-      if (isIgnorableStderrMessage(output) || isFFmpegInfoMessage(output)) {
-        console.log('[MediaMTX]', output.trim())
-      } else {
-        console.error('[MediaMTX Error]', output)
-        Sentry.captureMessage(`MediaMTX stderr: ${output.trim()}`, 'error')
-        startupError = output
+    mediamtxProcess.stderr?.on('data', (data: Buffer) => {
+      stderrBuffer += data.toString()
+      const lines = stderrBuffer.split('\n')
+      stderrBuffer = lines.pop() ?? ''
+
+      for (const line of lines) {
+        if (!line.trim()) continue
+        if (isIgnorableStderrMessage(line) || isFFmpegInfoMessage(line)) {
+          console.log('[MediaMTX]', line.trim())
+        } else {
+          console.error('[MediaMTX Error]', line)
+          Sentry.captureMessage(`MediaMTX stderr: ${line.trim()}`, 'error')
+          startupError = line
+        }
       }
     })
 
     // プロセス終了を監視
     mediamtxProcess.on('close', (code) => {
+      // バッファに残った未処理の行を処理
+      if (stderrBuffer.trim()) {
+        if (isIgnorableStderrMessage(stderrBuffer) || isFFmpegInfoMessage(stderrBuffer)) {
+          console.log('[MediaMTX]', stderrBuffer.trim())
+        } else {
+          console.error('[MediaMTX Error]', stderrBuffer)
+          Sentry.captureMessage(`MediaMTX stderr: ${stderrBuffer.trim()}`, 'error')
+          startupError = stderrBuffer
+        }
+        stderrBuffer = ''
+      }
+
       console.log(`[MediaMTX] Process exited with code ${code}`)
       mediamtxProcess = null
 
