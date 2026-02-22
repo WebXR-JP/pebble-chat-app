@@ -3,6 +3,7 @@ import { spawn, ChildProcess, execSync } from 'child_process'
 import { getMediaMTXPath, getMediaMTXConfigPath } from '../utils/paths'
 import { isFFmpegInfoMessage } from '../utils/ffmpeg'
 import { isIgnorableStderrMessage } from '../utils/mediamtx'
+import { splitChunkIntoLines } from '../utils/stderr'
 import { updateMediaMTXConfig } from './binary'
 
 let mediamtxProcess: ChildProcess | null = null
@@ -80,12 +81,10 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
     let stderrBuffer = ''
 
     mediamtxProcess.stderr?.on('data', (data: Buffer) => {
-      stderrBuffer += data.toString()
-      const lines = stderrBuffer.split('\n')
-      stderrBuffer = lines.pop() ?? ''
+      const result = splitChunkIntoLines(stderrBuffer, data.toString())
+      stderrBuffer = result.remainingBuffer
 
-      for (const line of lines) {
-        if (!line.trim()) continue
+      for (const line of result.lines) {
         if (isIgnorableStderrMessage(line) || isFFmpegInfoMessage(line)) {
           console.log('[MediaMTX]', line.trim())
         } else {
