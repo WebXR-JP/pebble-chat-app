@@ -16,6 +16,7 @@ export function isFFmpegInfoMessage(output: string): boolean {
     output.includes('libpostproc') ||
     // ストリーム情報（入力認識時に出力される）
     output.includes('Input #') ||
+    output.includes('Output #') ||
     output.includes('Stream #') ||
     output.includes('Metadata:') ||
     output.includes('Duration:') ||
@@ -33,6 +34,20 @@ export function isFFmpegInfoMessage(output: string): boolean {
     // FFmpeg終了時の汎用メッセージ（配信停止時に出力される）
     output.includes('Conversion failed!') ||
     // FFmpegエンコード進捗情報
-    /^frame=\s*\d+/.test(output.trim())
+    /^frame=\s*\d+/.test(output.trim()) ||
+    // x264エンコーダのバージョン・オプション行
+    output.includes('x264 - core') ||
+    output.includes('x264 [') ||
+    // エンコーダ設定出力（bitrate, buffer size等）
+    /bitrate\s*(max\/min\/avg:|=)/.test(output) ||
+    output.includes('vbv_delay:') ||
+    // FFmpegの重複メッセージ抑制ログ
+    /Last message repeated \d+ times/.test(output) ||
+    // デコーダのエラーコンシールメント（映像破損の自動修復、正常動作）
+    /concealing .+ errors in .+ frame/.test(output) ||
+    // コーデックライブラリ情報の断片（行バッファリング前のバージョンで発生）
+    /Lavc\d+/.test(output) ||
+    // ストリームパラメータの断片（行バッファリング前のバージョンで発生）
+    /\d+k?\s+tbn/.test(output)
   )
 }
