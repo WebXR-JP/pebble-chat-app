@@ -160,6 +160,84 @@ describe('isFFmpegInfoMessage', () => {
     })
   })
 
+  describe('出力ストリーム情報', () => {
+    it('Output # を含む出力は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('Output #0, flv, to \'rtmp://pebble.xrift.net:1935/live/abc\':')).toBe(true)
+    })
+  })
+
+  describe('x264エンコーダ情報', () => {
+    it('x264バージョン行は情報メッセージ', () => {
+      expect(
+        isFFmpegInfoMessage(
+          'x264 - core 165 r3223 0480cb0 - H.264/MPEG-4 AVC codec - Copyleft 2003-2025 - http://www.videolan.org/x264.html - options: cabac=0 ref=1'
+        )
+      ).toBe(true)
+    })
+
+    it('x264 infoブラケットログは情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('x264 [info]: using cpu capabilities: MMX2 SSE2Fast')).toBe(true)
+    })
+
+    it('x264 profileログは情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('x264 [info]: profile Constrained Baseline, level 3.0')).toBe(true)
+    })
+  })
+
+  describe('エンコーダ設定出力', () => {
+    it('bitrate max/min/avg 行は情報メッセージ', () => {
+      expect(
+        isFFmpegInfoMessage('bitrate max/min/avg: 0/0/1000000 buffer size: 0 vbv_delay: N/A')
+      ).toBe(true)
+    })
+
+    it('vbv_delay を含む出力は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('buffer size: 0 vbv_delay: N/A')).toBe(true)
+    })
+
+    it('bitrate= を含むエンコーダオプションは情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('rc=abr mbtree=0 bitrate=1000 ratetol=1.0')).toBe(true)
+    })
+  })
+
+  describe('FFmpegの重複メッセージ抑制', () => {
+    it('Last message repeated N times は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('Last message repeated 1 times')).toBe(true)
+    })
+
+    it('Last message repeated 複数回は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('Last message repeated 42 times')).toBe(true)
+    })
+  })
+
+  describe('デコーダのエラーコンシールメント', () => {
+    it('concealing errors in I frame は情報メッセージ', () => {
+      expect(
+        isFFmpegInfoMessage('concealing 3044 DC, 3044 AC, 3044 MV errors in I frame')
+      ).toBe(true)
+    })
+
+    it('concealing errors in P frame は情報メッセージ', () => {
+      expect(
+        isFFmpegInfoMessage('concealing 128 DC, 128 AC, 128 MV errors in P frame')
+      ).toBe(true)
+    })
+  })
+
+  describe('ストリームパラメータの断片（行バッファリング前）', () => {
+    it('Lavc + バージョン番号は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('Lavc62.11.100 libx264')).toBe(true)
+    })
+
+    it('tbn を含むストリームパラメータ断片は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('90k tbn, start 0.480000')).toBe(true)
+    })
+
+    it('fps/tbr/tbn を含むストリームパラメータ断片は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('60 fps, 29.08 tbr, 90k tbn, start 0.031000')).toBe(true)
+    })
+  })
+
   describe('実際のエラーメッセージ', () => {
     it('一般的なエラーメッセージはエラーとして判定', () => {
       expect(isFFmpegInfoMessage('Connection refused')).toBe(false)
