@@ -42,6 +42,36 @@ describe('isIgnorableStderrMessage', () => {
     })
   })
 
+  describe('Goスタックトレース行', () => {
+    it('.go:行番号 を含む行は無視対象', () => {
+      expect(isIgnorableStderrMessage('stream.go:251 +0x130')).toBe(true)
+    })
+
+    it('Goファイルパスを含む行は無視対象', () => {
+      expect(
+        isIgnorableStderrMessage(
+          'github.com/bluenviron/mediamtx/internal/core/path.go:456 +0x2a4'
+        )
+      ).toBe(true)
+    })
+
+    it('goroutineヘッダ行は無視対象', () => {
+      expect(isIgnorableStderrMessage('goroutine 1 [running]:')).toBe(true)
+    })
+
+    it('goroutine 複数桁IDは無視対象', () => {
+      expect(isIgnorableStderrMessage('goroutine 123 [chan receive]:')).toBe(true)
+    })
+
+    it('Goメモリアドレスを含む行は無視対象', () => {
+      expect(isIgnorableStderrMessage('main.(*Server).run(0xc0000b47e0)')).toBe(true)
+    })
+
+    it('panic: 行はフィルタされない（実エラー）', () => {
+      expect(isIgnorableStderrMessage('panic: runtime error: invalid memory address')).toBe(false)
+    })
+  })
+
   describe('エラーメッセージ', () => {
     it('一般的なエラーメッセージは無視対象ではない', () => {
       expect(isIgnorableStderrMessage('Connection refused')).toBe(false)
