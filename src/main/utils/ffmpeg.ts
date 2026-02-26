@@ -48,6 +48,11 @@ export function isFFmpegInfoMessage(output: string): boolean {
     // コーデックライブラリ情報の断片（行バッファリング前のバージョンで発生）
     /Lavc\d+/.test(output) ||
     // ストリームパラメータの断片（行バッファリング前のバージョンで発生）
-    /\d+k?\s+tbn/.test(output)
+    /\d+k?\s+tbn/.test(output) ||
+    // x264情報行の行バッファリング断片（`x264 - core` の `x` が前行に分離された残り）
+    output.includes('H.264/MPEG-4 AVC codec') ||
+    output.includes('options: cabac=') ||
+    // ストリーム情報の末尾断片（`, start 0.035000` 等、tbnが前行に含まれた残り）
+    /,?\s*start\s+\d+\.\d+/.test(output)
   )
 }

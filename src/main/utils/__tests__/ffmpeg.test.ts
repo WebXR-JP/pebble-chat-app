@@ -238,6 +238,34 @@ describe('isFFmpegInfoMessage', () => {
     })
   })
 
+  describe('x264行バッファリング断片', () => {
+    it('H.264/MPEG-4 AVC codec を含む断片は情報メッセージ', () => {
+      expect(
+        isFFmpegInfoMessage(
+          '264 - core 165 r3223 0480cb0 - H.264/MPEG-4 AVC codec - Copyleft 2003-2025'
+        )
+      ).toBe(true)
+    })
+
+    it('options: cabac= を含む断片は情報メッセージ', () => {
+      expect(
+        isFFmpegInfoMessage(
+          'options: cabac=0 ref=1 deblock=0:0:0 analyse=0:0 me=dia subme=0'
+        )
+      ).toBe(true)
+    })
+  })
+
+  describe('ストリーム情報末尾断片', () => {
+    it(', start で始まる断片は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage(', start 1.004000')).toBe(true)
+    })
+
+    it('start のみの断片は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('start 0.035000')).toBe(true)
+    })
+  })
+
   describe('実際のエラーメッセージ', () => {
     it('一般的なエラーメッセージはエラーとして判定', () => {
       expect(isFFmpegInfoMessage('Connection refused')).toBe(false)
