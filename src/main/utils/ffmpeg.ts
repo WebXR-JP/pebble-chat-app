@@ -53,6 +53,12 @@ export function isFFmpegInfoMessage(output: string): boolean {
     output.includes('H.264/MPEG-4 AVC codec') ||
     output.includes('options: cabac=') ||
     // ストリーム情報の末尾断片（`, start 0.035000` 等、tbnが前行に含まれた残り）
-    /,?\s*start\s+\d+\.\d+/.test(output)
+    /,?\s*start\s+\d+\.\d+/.test(output) ||
+    // ストリームマッピング情報（FFmpeg初期化時に出力される構成情報）
+    output.includes('Stream mapping:') ||
+    // サイドデータ情報（ストリームメタデータの一部）
+    output.includes('Side data:') ||
+    // エンコーダメタデータ（Lavf = libavformat バージョン情報）
+    /encoder\s*:\s*Lav[cf]\d+/.test(output)
   )
 }
