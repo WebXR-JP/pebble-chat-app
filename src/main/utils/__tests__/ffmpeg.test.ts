@@ -266,6 +266,32 @@ describe('isFFmpegInfoMessage', () => {
     })
   })
 
+  describe('ストリームマッピング情報', () => {
+    it('Stream mapping: は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('Stream mapping:')).toBe(true)
+    })
+  })
+
+  describe('サイドデータ情報', () => {
+    it('Side data: は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('Side data:')).toBe(true)
+    })
+
+    it('インデント付き Side data: は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('    Side data:')).toBe(true)
+    })
+  })
+
+  describe('エンコーダメタデータ', () => {
+    it('encoder : Lavf は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('encoder         : Lavf62.3.100')).toBe(true)
+    })
+
+    it('encoder : Lavc は情報メッセージ', () => {
+      expect(isFFmpegInfoMessage('encoder         : Lavc62.11.100')).toBe(true)
+    })
+  })
+
   describe('実際のエラーメッセージ', () => {
     it('一般的なエラーメッセージはエラーとして判定', () => {
       expect(isFFmpegInfoMessage('Connection refused')).toBe(false)

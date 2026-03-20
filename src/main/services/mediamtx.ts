@@ -225,7 +225,7 @@ export function pollHlsPlaybackReady(
   onTimeout: () => void,
   options: { interval?: number; maxAttempts?: number } = {}
 ): () => void {
-  const { interval = 1000, maxAttempts = 60 } = options
+  const { interval = 1000, maxAttempts = 120 } = options
   let attempts = 0
   let stopped = false
   let timeoutId: ReturnType<typeof setTimeout> | null = null
