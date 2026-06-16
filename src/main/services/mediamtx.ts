@@ -8,6 +8,10 @@ import { updateMediaMTXConfig } from './binary'
 
 let mediamtxProcess: ChildProcess | null = null
 
+// stopMediaMTX による意図的な停止かどうかのフラグ
+// 異常終了（クラッシュ）のときだけSentryへ送るために使う
+let stoppingIntentionally = false
+
 // 既存のMediaMTXプロセスを強制終了（Windows用）
 function killExistingMediaMTX(): void {
   if (process.platform === 'win32') {
@@ -88,8 +92,15 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
         if (isIgnorableStderrMessage(line) || isFFmpegInfoMessage(line)) {
           console.log('[MediaMTX]', line.trim())
         } else {
+          // 個別行をエラーとして送らず、breadcrumbとして蓄積する。
+          // 実際にプロセスが異常終了したとき（close handler）にだけ、
+          // 直近のstderrを文脈として付けた1イベントを送る。
           console.error('[MediaMTX Error]', line)
-          Sentry.captureMessage(`MediaMTX stderr: ${line.trim()}`, 'error')
+          Sentry.addBreadcrumb({
+            category: 'mediamtx.stderr',
+            level: 'error',
+            message: line.trim()
+          })
           startupError = line
         }
       }
@@ -103,13 +114,29 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
           console.log('[MediaMTX]', stderrBuffer.trim())
         } else {
           console.error('[MediaMTX Error]', stderrBuffer)
-          Sentry.captureMessage(`MediaMTX stderr: ${stderrBuffer.trim()}`, 'error')
+          Sentry.addBreadcrumb({
+            category: 'mediamtx.stderr',
+            level: 'error',
+            message: stderrBuffer.trim()
+          })
           startupError = stderrBuffer
         }
         stderrBuffer = ''
       }
 
       console.log(`[MediaMTX] Process exited with code ${code}`)
+
+      // 意図的な停止ではない異常終了（クラッシュ）のときだけSentryへ送る。
+      // 直近のstderrはbreadcrumbとして自動的にイベントへ付与される。
+      if (code !== 0 && code !== null && !stoppingIntentionally) {
+        Sentry.captureException(
+          new Error(
+            `MediaMTX exited unexpectedly with code ${code}` +
+              (startupError ? `: ${startupError.trim()}` : '')
+          )
+        )
+      }
+      stoppingIntentionally = false
       mediamtxProcess = null
 
       if (!started) {
@@ -159,6 +186,9 @@ export async function stopMediaMTX(): Promise<void> {
   if (!mediamtxProcess) {
     return
   }
+
+  // 意図的な停止なので、close handler でのクラッシュ送信を抑止する
+  stoppingIntentionally = true
 
   return new Promise((resolve) => {
     mediamtxProcess!.on('close', () => {
