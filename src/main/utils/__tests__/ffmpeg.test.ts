@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isFFmpegInfoMessage } from '../ffmpeg'
+import { isFFmpegInfoMessage, hasLibx264Encoder } from '../ffmpeg'
 
 describe('isFFmpegInfoMessage', () => {
   describe('FFmpegバージョン情報', () => {
@@ -308,5 +308,38 @@ describe('isFFmpegInfoMessage', () => {
     it('空文字列はエラーとして判定', () => {
       expect(isFFmpegInfoMessage('')).toBe(false)
     })
+  })
+})
+
+describe('hasLibx264Encoder', () => {
+  it('libx264の行があれば true', () => {
+    const output = [
+      'Encoders:',
+      ' V..... = Video',
+      ' ------',
+      ' V....D libx264              libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (codec h264)',
+      ' V....D libx264rgb           libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 RGB (codec h264)'
+    ].join('\n')
+    expect(hasLibx264Encoder(output)).toBe(true)
+  })
+
+  it('libx264rgbだけでは false', () => {
+    expect(hasLibx264Encoder(' V....D libx264rgb           libx264 H.264 RGB (codec h264)')).toBe(false)
+  })
+
+  it('libopenh264など別のH.264エンコーダーだけでは false', () => {
+    expect(hasLibx264Encoder(' V....D libopenh264          OpenH264 H.264 / AVC (codec h264)')).toBe(false)
+  })
+
+  it('説明文にlibx264が出てくるだけでは false', () => {
+    expect(hasLibx264Encoder(' V....D h264_videotoolbox    VideoToolbox H.264 Encoder (libx264 compatible)')).toBe(false)
+  })
+
+  it('Windowsの改行（CRLF）でも判定できる', () => {
+    expect(hasLibx264Encoder('Encoders:\r\n V....D libx264              libx264 H.264\r\n')).toBe(true)
+  })
+
+  it('空文字は false', () => {
+    expect(hasLibx264Encoder('')).toBe(false)
   })
 })
