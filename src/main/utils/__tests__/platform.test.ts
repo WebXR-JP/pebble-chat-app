@@ -17,6 +17,7 @@ import {
   getMediaMTXDownloadUrl,
   getMediaMTXBinaryName,
   getFFmpegDownloadUrl,
+  getFFmpegDownloadSha256,
   getFFmpegBinaryName
 } from '../platform'
 import os from 'os'
@@ -162,22 +163,32 @@ describe('platform', () => {
       expect(url).toBe('https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip')
     })
 
-    it('macOS x64 では evermeet.cx の URL を返す', () => {
+    it('macOS x64 では Intel (amd64) 版の URL を返す', () => {
       vi.mocked(os.platform).mockReturnValue('darwin')
       vi.mocked(os.arch).mockReturnValue('x64')
 
       const url = getFFmpegDownloadUrl()
 
-      expect(url).toBe('https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip')
+      expect(url).toBe('https://ffmpeg.martin-riedl.de/download/macos/amd64/1795212433_9.1/ffmpeg.zip')
     })
 
-    it('macOS arm64 では evermeet.cx の URL を返す', () => {
+    it('macOS arm64 では Apple Silicon ネイティブ (arm64) 版の URL を返す', () => {
       vi.mocked(os.platform).mockReturnValue('darwin')
       vi.mocked(os.arch).mockReturnValue('arm64')
 
       const url = getFFmpegDownloadUrl()
 
-      expect(url).toBe('https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip')
+      expect(url).toBe('https://ffmpeg.martin-riedl.de/download/macos/arm64/1795207104_9.1/ffmpeg.zip')
+    })
+
+    it('macOS の arm64 と x64 で異なる URL を返す', () => {
+      vi.mocked(os.platform).mockReturnValue('darwin')
+      vi.mocked(os.arch).mockReturnValue('arm64')
+      const arm64Url = getFFmpegDownloadUrl()
+      vi.mocked(os.arch).mockReturnValue('x64')
+      const x64Url = getFFmpegDownloadUrl()
+
+      expect(arm64Url).not.toBe(x64Url)
     })
 
     it('Linux では空文字を返す', () => {
@@ -187,6 +198,36 @@ describe('platform', () => {
       const url = getFFmpegDownloadUrl()
 
       expect(url).toBe('')
+    })
+  })
+
+  describe('getFFmpegDownloadSha256', () => {
+    it('macOS arm64 では arm64 版の SHA256 を返す', () => {
+      vi.mocked(os.platform).mockReturnValue('darwin')
+      vi.mocked(os.arch).mockReturnValue('arm64')
+
+      expect(getFFmpegDownloadSha256()).toBe('1f66e9a690a7f1c9e60b012379f8869c11818d1797f45b21dbb2f2564ba61ae1')
+    })
+
+    it('macOS x64 では amd64 版の SHA256 を返す', () => {
+      vi.mocked(os.platform).mockReturnValue('darwin')
+      vi.mocked(os.arch).mockReturnValue('x64')
+
+      expect(getFFmpegDownloadSha256()).toBe('35b3d82cccc2c1d644d49d15f5e57eb913a08ef68f798042c90eecec62c51f1e')
+    })
+
+    it('Windows では照合しないので null', () => {
+      vi.mocked(os.platform).mockReturnValue('win32')
+      vi.mocked(os.arch).mockReturnValue('x64')
+
+      expect(getFFmpegDownloadSha256()).toBeNull()
+    })
+
+    it('Linux では null', () => {
+      vi.mocked(os.platform).mockReturnValue('linux')
+      vi.mocked(os.arch).mockReturnValue('x64')
+
+      expect(getFFmpegDownloadSha256()).toBeNull()
     })
   })
 

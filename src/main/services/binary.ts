@@ -6,11 +6,13 @@ import type { ReadableStream as NodeReadableStream } from 'stream/web'
 import { pipeline } from 'stream/promises'
 import { net } from 'electron'
 import { exec } from 'child_process'
+import { createHash } from 'crypto'
 import * as tar from 'tar'
 import { Extract } from 'unzipper'
 import { getBinariesPath, getMediaMTXPath, getTempPath, getMediaMTXConfigPath, getBundledFFmpegPath, getFFmpegPath } from '../utils/paths'
-import { getPlatform, getMediaMTXDownloadUrl, getMediaMTXBinaryName, getFFmpegDownloadUrl } from '../utils/platform'
-import { createDownloadFileName } from '../utils/download'
+import { getPlatform, getArchitecture, getMediaMTXDownloadUrl, getMediaMTXBinaryName, getFFmpegDownloadUrl, getFFmpegDownloadSha256 } from '../utils/platform'
+import { createDownloadFileName, isSha256Match } from '../utils/download'
+import { getMachOArchitecture, isMachOArchitectureCompatible, MACHO_HEADER_LENGTH } from '../utils/macho'
 
 const MEDIAMTX_VERSION = '1.9.3'
 
@@ -30,18 +32,53 @@ export async function isMediaMTXInstalled(): Promise<boolean> {
   }
 }
 
-// FFmpegがインストール済みか確認（バンドル版のみチェック）
+// FFmpegがインストール済みか確認（バンドル版を優先し、なければシステムのFFmpegを探す）
 export async function isFFmpegInstalled(): Promise<boolean> {
-  // バンドル版があるかチェック
   const bundledPath = getBundledFFmpegPath()
   try {
     await fsp.access(bundledPath, fs.constants.X_OK)
-    return true
   } catch {
     // バンドル版がない場合、システムにFFmpegがあるかチェック
-    const systemPath = getFFmpegPath()
-    return systemPath !== null
+    return getFFmpegPath() !== null
   }
+
+  // 以前は Apple Silicon でも x86_64 版をダウンロードしていたため、それが残っていると
+  // Rosetta のない Mac では起動できない。アーキテクチャが合わなければ未インストール扱いにして入れ直す
+  if (getPlatform() !== 'darwin') return true
+  return isBundledFFmpegArchitectureCompatible(bundledPath)
+}
+
+// バンドル版FFmpegが実行中のプロセスと同じアーキテクチャか（読めない場合は互換ありとして扱う）
+async function isBundledFFmpegArchitectureCompatible(bundledPath: string): Promise<boolean> {
+  try {
+    const header = await readFileHeader(bundledPath, MACHO_HEADER_LENGTH)
+    const compatible = isMachOArchitectureCompatible(getMachOArchitecture(header), getArchitecture())
+    if (!compatible) console.warn('[Binary] Bundled FFmpeg architecture does not match, reinstalling:', bundledPath)
+    return compatible
+  } catch {
+    return true
+  }
+}
+
+// ファイル先頭の指定バイト数を読む
+async function readFileHeader(filePath: string, length: number): Promise<Uint8Array> {
+  const handle = await fsp.open(filePath, 'r')
+  try {
+    const buffer = Buffer.alloc(length)
+    const { bytesRead } = await handle.read(buffer, 0, length, 0)
+    return buffer.subarray(0, bytesRead)
+  } finally {
+    await handle.close()
+  }
+}
+
+// ファイルのSHA256（16進）を計算する
+async function computeFileSha256(filePath: string): Promise<string> {
+  const hash = createHash('sha256')
+  for await (const chunk of fs.createReadStream(filePath)) {
+    hash.update(chunk)
+  }
+  return hash.digest('hex')
 }
 
 // Windows用FFmpegインストール
@@ -80,11 +117,25 @@ async function installFFmpegMacOS(
   binPath: string,
   tempPath: string,
   downloadUrl: string,
+  expectedSha256: string | null,
   onProgress?: (message: string) => void
 ): Promise<void> {
   const archivePath = path.join(tempPath, createDownloadFileName('ffmpeg', 'zip', Date.now()))
   await withTempFile(archivePath, async () => {
     await downloadFile(downloadUrl, archivePath)
+
+    // 実行するバイナリなので、配布元が公開しているハッシュと照合してから展開する
+    if (expectedSha256) {
+      const actualSha256 = await computeFileSha256(archivePath)
+      if (!isSha256Match(actualSha256, expectedSha256)) {
+        throw new Error(`FFmpegのダウンロードファイルが壊れているか改ざんされています（SHA256: ${actualSha256}）`)
+      }
+    }
+
+    // 既存のバイナリ（以前の x86_64 版など）は上書きせず削除してから展開する。
+    // 署名済みの実行ファイルを同じファイルのまま書き換えると、macOS がコード署名の
+    // キャッシュと食い違うと判断して起動時に強制終了することがあるため
+    await fsp.rm(getBundledFFmpegPath(), { force: true })
 
     onProgress?.('FFmpegを展開中...')
     await extractZip(archivePath, binPath)
@@ -115,12 +166,12 @@ export async function installFFmpeg(
     throw new Error('このプラットフォームではFFmpegの自動インストールはサポートされていません')
   }
 
-  onProgress?.('FFmpegをダウンロード中...（100MB以上あるため時間がかかります）')
+  onProgress?.('FFmpegをダウンロード中...（サイズが大きいため時間がかかることがあります）')
 
   if (platform === 'win32') {
     await installFFmpegWindows(tempPath, downloadUrl, onProgress)
   } else if (platform === 'darwin') {
-    await installFFmpegMacOS(binPath, tempPath, downloadUrl, onProgress)
+    await installFFmpegMacOS(binPath, tempPath, downloadUrl, getFFmpegDownloadSha256(), onProgress)
   }
 
   onProgress?.('FFmpegのインストール完了')
