@@ -305,15 +305,9 @@ rtmpAddress: :1935
 webrtc: yes
 webrtcAddress: :8889
 
-# HLS出力設定（ローカル確認用、通常は使用しない）
-hls: yes
-hlsAddress: :8888
-hlsVariant: mpegts
-hlsSegmentCount: 3
-hlsSegmentDuration: 1s
-hlsPartDuration: 200ms
-hlsAllowOrigin: '*'
-hlsAlwaysRemux: yes
+# ローカルHLS出力は使用しない（HLSはリレーサーバー側で生成する）
+# 有効にすると:8888を開こうとし、Windowsで予約済みポートだった場合にMediaMTXごと起動に失敗する
+hls: no
 
 # 不要なプロトコルを無効化
 api: no
