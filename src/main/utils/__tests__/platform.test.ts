@@ -162,22 +162,32 @@ describe('platform', () => {
       expect(url).toBe('https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip')
     })
 
-    it('macOS x64 では evermeet.cx の URL を返す', () => {
+    it('macOS x64 では Intel (amd64) 版の URL を返す', () => {
       vi.mocked(os.platform).mockReturnValue('darwin')
       vi.mocked(os.arch).mockReturnValue('x64')
 
       const url = getFFmpegDownloadUrl()
 
-      expect(url).toBe('https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip')
+      expect(url).toBe('https://ffmpeg.martin-riedl.de/download/macos/amd64/1795212433_9.1/ffmpeg.zip')
     })
 
-    it('macOS arm64 では evermeet.cx の URL を返す', () => {
+    it('macOS arm64 では Apple Silicon ネイティブ (arm64) 版の URL を返す', () => {
       vi.mocked(os.platform).mockReturnValue('darwin')
       vi.mocked(os.arch).mockReturnValue('arm64')
 
       const url = getFFmpegDownloadUrl()
 
-      expect(url).toBe('https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip')
+      expect(url).toBe('https://ffmpeg.martin-riedl.de/download/macos/arm64/1795207104_9.1/ffmpeg.zip')
+    })
+
+    it('macOS の arm64 と x64 で異なる URL を返す', () => {
+      vi.mocked(os.platform).mockReturnValue('darwin')
+      vi.mocked(os.arch).mockReturnValue('arm64')
+      const arm64Url = getFFmpegDownloadUrl()
+      vi.mocked(os.arch).mockReturnValue('x64')
+      const x64Url = getFFmpegDownloadUrl()
+
+      expect(arm64Url).not.toBe(x64Url)
     })
 
     it('Linux では空文字を返す', () => {

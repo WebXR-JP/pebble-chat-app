@@ -45,25 +45,26 @@ export function getMediaMTXBinaryName(): string {
   return getPlatform() === 'win32' ? 'mediamtx.exe' : 'mediamtx'
 }
 
-// FFmpegダウンロードURL生成（Windows用のみ、macOS/LinuxはシステムのFFmpegを使用）
+// macOS用FFmpeg（Martin Riedl氏のビルドサーバーが配布する GPL 静的ビルド、libx264 入り）
+// arm64 ネイティブ版があるため、Rosetta のない Apple Silicon Mac でも動く。
+// latest へのリダイレクトではなくバージョン固定のURLを使い、配布物の中身が勝手に変わらないようにする
+// （過去のリリースも 2022 年分から残されている）。更新時は https://ffmpeg.martin-riedl.de/ の
+// Release ビルドの URL に差し替える。zip の直下に ffmpeg バイナリが1つだけ入っている
+const MACOS_FFMPEG_DOWNLOAD_URLS: Record<Architecture, string> = {
+  arm64: 'https://ffmpeg.martin-riedl.de/download/macos/arm64/1795207104_9.1/ffmpeg.zip',
+  x64: 'https://ffmpeg.martin-riedl.de/download/macos/amd64/1795212433_9.1/ffmpeg.zip'
+}
+
+// FFmpegダウンロードURL生成（Windows / macOS 用。Linux はシステムのFFmpegを使用）
 export function getFFmpegDownloadUrl(): string {
   const platform = getPlatform()
-  const arch = getArchitecture()
 
-  if (platform === 'win32') {
-    // gyan.devのessentialsビルドを使用（軽量版）
-    return 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip'
-  } else if (platform === 'darwin') {
-    // macOS用はevermeet.cxからダウンロード
-    if (arch === 'arm64') {
-      return 'https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip'
-    } else {
-      return 'https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip'
-    }
-  } else {
-    // Linuxはシステムのffmpegを使用（自動ダウンロード非対応）
-    return ''
-  }
+  // gyan.devのessentialsビルドを使用（軽量版）
+  if (platform === 'win32') return 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip'
+  if (platform === 'darwin') return MACOS_FFMPEG_DOWNLOAD_URLS[getArchitecture()]
+
+  // Linuxはシステムのffmpegを使用（自動ダウンロード非対応）
+  return ''
 }
 
 // FFmpegバイナリ名
