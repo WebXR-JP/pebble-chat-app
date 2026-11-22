@@ -259,8 +259,12 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
   resetIdleTimer()
 
   try {
-    const response = await net.fetch(url, { signal: controller.signal })
-    if (!response.ok || !response.body) {
+    // 100MB以上あるFFmpegなどをChromiumのHTTPキャッシュ（userData/Cache）に溜めないよう、キャッシュを使わない
+    const response = await net.fetch(url, { signal: controller.signal, cache: 'no-store' })
+    // 部分レスポンス（206など）を完全なファイルとして扱わないよう、200のみ受け付ける
+    if (response.status !== 200 || !response.body) {
+      // 読まないボディは破棄して、リクエストを開いたままにしない
+      await response.body?.cancel().catch(() => {})
       throw new Error(`Download failed: ${response.status}`)
     }
 
