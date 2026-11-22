@@ -73,7 +73,19 @@ export async function startMediaMTX(
     })
 
     let startupError: string | null = null
+    // 起動判定を開始したか（ログ検知 or タイムアウト後のヘルスチェック）
     let started = false
+    // Promiseを解決済みか、また起動成功として解決したか
+    // 起動成功として呼び出し元に返した後の異常終了だけを onUnexpectedExit で通知する
+    let settled = false
+    let resolvedAsRunning = false
+
+    const settle = (status: MediaMTXStatus): void => {
+      if (settled) return
+      settled = true
+      resolvedAsRunning = status.running
+      resolve(status)
+    }
 
     // 標準出力を監視（起動確認）
     // MediaMTX自身のログ（ERRを含む）はlogDestinations: [stdout]によりstdoutに出る
@@ -94,7 +106,7 @@ export async function startMediaMTX(
       // 起動完了を検知
       if (!started && isMediaMTXReadyLog(line)) {
         started = true
-        resolve({
+        settle({
           running: true,
           pid: mediamtxProcess?.pid ?? null,
           error: null
@@ -137,7 +149,7 @@ export async function startMediaMTX(
     })
 
     // プロセス終了を監視
-    mediamtxProcess.on('close', (code) => {
+    mediamtxProcess.on('close', (code, signal) => {
       if (stdoutBuffer.trim()) {
         handleStdoutLine(stdoutBuffer)
         stdoutBuffer = ''
@@ -159,15 +171,17 @@ export async function startMediaMTX(
         stderrBuffer = ''
       }
 
-      console.log(`[MediaMTX] Process exited with code ${code}`)
+      const exitReason = code !== null ? `code ${code}` : `signal ${signal}`
+      console.log(`[MediaMTX] Process exited with ${exitReason}`)
 
       // 意図的な停止ではない異常終了（クラッシュ）のときだけSentryへ送る。
+      // シグナルによる強制終了（code === null）も、意図的な停止でなければ異常終了として扱う。
       // 直近のstderrはbreadcrumbとして自動的にイベントへ付与される。
-      const exitedUnexpectedly = code !== 0 && code !== null && !stoppingIntentionally
+      const exitedUnexpectedly = code !== 0 && !stoppingIntentionally
       if (exitedUnexpectedly) {
         Sentry.captureException(
           new Error(
-            `MediaMTX exited unexpectedly with code ${code}` +
+            `MediaMTX exited unexpectedly with ${exitReason}` +
               (startupError ? `: ${startupError.trim()}` : '')
           )
         )
@@ -177,11 +191,11 @@ export async function startMediaMTX(
 
       const errorMessage = startupError
         ? formatMediaMTXStartupError(startupError)
-        : `Process exited with code ${code}`
+        : `Process exited with ${exitReason}`
 
-      if (!started) {
-        started = true
-        resolve({
+      // 起動判定の途中（タイムアウト後のヘルスチェック中を含む）に終了した場合は起動失敗として返す
+      if (!settled) {
+        settle({
           running: false,
           pid: null,
           error: errorMessage
@@ -189,14 +203,14 @@ export async function startMediaMTX(
         return
       }
 
-      // 起動完了後の異常終了は呼び出し元に通知する（HLSポーリングの停止など）
-      if (exitedUnexpectedly) options.onUnexpectedExit?.(errorMessage)
+      // 起動成功として返した後の異常終了は呼び出し元に通知する（HLSポーリングの停止など）
+      if (resolvedAsRunning && exitedUnexpectedly) options.onUnexpectedExit?.(errorMessage)
     })
 
     mediamtxProcess.on('error', (err) => {
       console.error('[MediaMTX] Failed to start:', err)
       mediamtxProcess = null
-      resolve({
+      settle({
         running: false,
         pid: null,
         error: err.message
@@ -205,23 +219,32 @@ export async function startMediaMTX(
 
     // タイムアウト（5秒で起動確認できなければヘルスチェックで判定）
     setTimeout(async () => {
-      if (!started && mediamtxProcess) {
-        started = true
-        const healthy = await checkMediaMTXHealth()
-        if (healthy) {
-          resolve({
-            running: true,
-            pid: mediamtxProcess?.pid ?? null,
-            error: null
-          })
-        } else {
-          resolve({
-            running: false,
-            pid: null,
-            error: 'MediaMTXの起動タイムアウト: ヘルスチェックに失敗しました'
-          })
-        }
+      if (started || !mediamtxProcess) return
+
+      started = true
+      const healthy = await checkMediaMTXHealth()
+
+      // ヘルスチェック中にプロセスが終了した場合は close handler で解決済み
+      if (!mediamtxProcess) return
+
+      if (healthy) {
+        settle({
+          running: true,
+          pid: mediamtxProcess.pid ?? null,
+          error: null
+        })
+        return
       }
+
+      // 起動失敗として返すので、プロセスも止める
+      // （残しておくと次回の startMediaMTX が古いストリームIDの設定のまま「起動中」を返してしまう）
+      stoppingIntentionally = true
+      mediamtxProcess.kill()
+      settle({
+        running: false,
+        pid: null,
+        error: 'MediaMTXの起動タイムアウト: ヘルスチェックに失敗しました'
+      })
     }, 5000)
   })
 }
