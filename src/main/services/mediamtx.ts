@@ -2,7 +2,12 @@ import * as Sentry from '@sentry/electron/main'
 import { spawn, ChildProcess, execSync } from 'child_process'
 import { getMediaMTXPath, getMediaMTXConfigPath } from '../utils/paths'
 import { isFFmpegInfoMessage } from '../utils/ffmpeg'
-import { isIgnorableStderrMessage } from '../utils/mediamtx'
+import {
+  isIgnorableStderrMessage,
+  isMediaMTXReadyLog,
+  isMediaMTXErrorLog,
+  formatMediaMTXStartupError
+} from '../utils/mediamtx'
 import { splitChunkIntoLines } from '../utils/stderr'
 import { updateMediaMTXConfig } from './binary'
 
@@ -30,8 +35,16 @@ export interface MediaMTXStatus {
   error: string | null
 }
 
+export interface StartMediaMTXOptions {
+  // 起動完了後にMediaMTXが異常終了したときに呼ばれる
+  onUnexpectedExit?: (error: string) => void
+}
+
 // MediaMTXを起動
-export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> {
+export async function startMediaMTX(
+  streamId?: string,
+  options: StartMediaMTXOptions = {}
+): Promise<MediaMTXStatus> {
   if (mediamtxProcess) {
     return {
       running: true,
@@ -63,12 +76,23 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
     let started = false
 
     // 標準出力を監視（起動確認）
-    mediamtxProcess.stdout?.on('data', (data: Buffer) => {
-      const output = data.toString()
-      console.log('[MediaMTX]', output)
+    // MediaMTX自身のログ（ERRを含む）はlogDestinations: [stdout]によりstdoutに出る
+    let stdoutBuffer = ''
+
+    const handleStdoutLine = (line: string): void => {
+      console.log('[MediaMTX]', line.trim())
+
+      if (isMediaMTXErrorLog(line)) {
+        Sentry.addBreadcrumb({
+          category: 'mediamtx.stdout',
+          level: 'error',
+          message: line.trim()
+        })
+        startupError = line
+      }
 
       // 起動完了を検知
-      if (!started && output.includes('listener opened')) {
+      if (!started && isMediaMTXReadyLog(line)) {
         started = true
         resolve({
           running: true,
@@ -76,6 +100,12 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
           error: null
         })
       }
+    }
+
+    mediamtxProcess.stdout?.on('data', (data: Buffer) => {
+      const result = splitChunkIntoLines(stdoutBuffer, data.toString())
+      stdoutBuffer = result.remainingBuffer
+      result.lines.forEach(handleStdoutLine)
     })
 
     // エラー出力を監視
@@ -108,6 +138,11 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
 
     // プロセス終了を監視
     mediamtxProcess.on('close', (code) => {
+      if (stdoutBuffer.trim()) {
+        handleStdoutLine(stdoutBuffer)
+        stdoutBuffer = ''
+      }
+
       // バッファに残った未処理の行を処理
       if (stderrBuffer.trim()) {
         if (isIgnorableStderrMessage(stderrBuffer) || isFFmpegInfoMessage(stderrBuffer)) {
@@ -128,7 +163,8 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
 
       // 意図的な停止ではない異常終了（クラッシュ）のときだけSentryへ送る。
       // 直近のstderrはbreadcrumbとして自動的にイベントへ付与される。
-      if (code !== 0 && code !== null && !stoppingIntentionally) {
+      const exitedUnexpectedly = code !== 0 && code !== null && !stoppingIntentionally
+      if (exitedUnexpectedly) {
         Sentry.captureException(
           new Error(
             `MediaMTX exited unexpectedly with code ${code}` +
@@ -139,13 +175,22 @@ export async function startMediaMTX(streamId?: string): Promise<MediaMTXStatus> 
       stoppingIntentionally = false
       mediamtxProcess = null
 
+      const errorMessage = startupError
+        ? formatMediaMTXStartupError(startupError)
+        : `Process exited with code ${code}`
+
       if (!started) {
+        started = true
         resolve({
           running: false,
           pid: null,
-          error: startupError || `Process exited with code ${code}`
+          error: errorMessage
         })
+        return
       }
+
+      // 起動完了後の異常終了は呼び出し元に通知する（HLSポーリングの停止など）
+      if (exitedUnexpectedly) options.onUnexpectedExit?.(errorMessage)
     })
 
     mediamtxProcess.on('error', (err) => {
@@ -217,14 +262,12 @@ export function getMediaMTXStatus(): MediaMTXStatus {
   }
 }
 
-// ヘルスチェック（HLSエンドポイントに接続確認）
+// ヘルスチェック（レンダラーが接続するWebRTC/WHIPのHTTPリスナーに接続確認）
 export async function checkMediaMTXHealth(): Promise<boolean> {
   try {
-    const response = await fetch('http://localhost:8888/live_hls/index.m3u8', {
-      method: 'HEAD'
-    })
-    // 404も正常（配信がまだないだけ）
-    return response.status === 200 || response.status === 404
+    const response = await fetch('http://localhost:8889/')
+    // ルートは404を返すが、HTTP応答があればリスナーは起動している
+    return response.status < 500
   } catch {
     return false
   }

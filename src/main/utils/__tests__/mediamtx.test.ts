@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { isIgnorableStderrMessage } from '../mediamtx'
+import {
+  isIgnorableStderrMessage,
+  isMediaMTXReadyLog,
+  isMediaMTXErrorLog,
+  formatMediaMTXStartupError
+} from '../mediamtx'
 
 describe('isIgnorableStderrMessage', () => {
   describe('空行・空白のみ', () => {
@@ -84,5 +89,72 @@ describe('isIgnorableStderrMessage', () => {
     it('バインドエラーは無視対象ではない', () => {
       expect(isIgnorableStderrMessage('bind: permission denied')).toBe(false)
     })
+  })
+})
+
+describe('isMediaMTXReadyLog', () => {
+  it('WebRTCリスナーのオープンは起動完了', () => {
+    expect(isMediaMTXReadyLog('2026/11/11 22:31:11 INF [WebRTC] listener opened on :8889 (HTTP), :8189 (ICE/UDP)')).toBe(true)
+  })
+
+  it('RTSPリスナーのオープンだけでは起動完了ではない', () => {
+    expect(
+      isMediaMTXReadyLog('2026/11/11 22:31:11 INF [RTSP] listener opened on :8554 (TCP), :8000 (UDP/RTP), :8001 (UDP/RTCP)')
+    ).toBe(false)
+  })
+
+  it('RTMPリスナーのオープンだけでは起動完了ではない', () => {
+    expect(isMediaMTXReadyLog('2026/11/11 22:31:11 INF [RTMP] listener opened on :1935')).toBe(false)
+  })
+})
+
+describe('isMediaMTXErrorLog', () => {
+  it('ERRレベルのログはエラー', () => {
+    expect(
+      isMediaMTXErrorLog(
+        '2026/11/11 22:31:11 ERR listen tcp :8888: bind: An attempt was made to access a socket in a way forbidden by its access permissions.'
+      )
+    ).toBe(true)
+  })
+
+  it('INFレベルのログはエラーではない', () => {
+    expect(isMediaMTXErrorLog('2026/11/11 22:31:11 INF MediaMTX v1.9.3')).toBe(false)
+  })
+
+  it('WARレベルのログはエラーではない', () => {
+    expect(isMediaMTXErrorLog('2026/11/11 22:31:11 WAR something')).toBe(false)
+  })
+
+  it('メッセージ本文に ERR を含むだけの行はエラーではない', () => {
+    expect(isMediaMTXErrorLog('2026/11/11 22:31:11 INF [path live] ERR in name')).toBe(false)
+  })
+
+  it('前後の空白は無視する', () => {
+    expect(isMediaMTXErrorLog('  2026/11/11 22:31:11 ERR boom\n')).toBe(true)
+  })
+})
+
+describe('formatMediaMTXStartupError', () => {
+  it('Windowsのポート予約によるbind失敗はポート番号付きのメッセージにする', () => {
+    const message = formatMediaMTXStartupError(
+      '2026/11/11 22:31:11 ERR listen tcp :8889: bind: An attempt was made to access a socket in a way forbidden by its access permissions.'
+    )
+    expect(message).toContain('ポート8889を使用できませんでした')
+  })
+
+  it('アドレス使用中によるbind失敗もポート番号付きのメッセージにする', () => {
+    const message = formatMediaMTXStartupError('2026/11/11 22:31:11 ERR listen tcp :1935: bind: address already in use')
+    expect(message).toContain('ポート1935を使用できませんでした')
+  })
+
+  it('UDPのbind失敗も対象', () => {
+    const message = formatMediaMTXStartupError('2026/11/11 22:31:11 ERR listen udp :8000: bind: address already in use')
+    expect(message).toContain('ポート8000を使用できませんでした')
+  })
+
+  it('bind失敗以外は元のメッセージをtrimして返す', () => {
+    expect(formatMediaMTXStartupError('  2026/11/11 22:31:11 ERR something else\n')).toBe(
+      '2026/11/11 22:31:11 ERR something else'
+    )
   })
 })

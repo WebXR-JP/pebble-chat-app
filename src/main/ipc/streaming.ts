@@ -54,6 +54,23 @@ function sendCaptureStatus(window: BrowserWindow | null, info: CaptureInfo): voi
 
 // IPCハンドラを登録
 export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | null): void {
+  // 配信中にMediaMTXが異常終了した場合
+  // HLSポーリングを止めてエラーを表示する（止めないと120秒後にタイムアウト扱いになる）
+  const handleMediaMTXUnexpectedExit = (error: string): void => {
+    if (cancelHlsPolling) {
+      cancelHlsPolling()
+      cancelHlsPolling = null
+    }
+
+    sendStreamStatus(getMainWindow(), {
+      ...currentStreamInfo,
+      status: 'error',
+      readyForPlayback: false,
+      error: `MediaMTXが異常終了しました: ${error}`,
+      pipelineStatus: { mediamtx: 'error', rtmp: 'pending', hls: 'pending' }
+    })
+  }
+
   // セットアップ確認
   ipcMain.handle(IPC_CHANNELS.SETUP_CHECK, async (): Promise<SetupProgress> => {
     const mediamtxReady = await isMediaMTXInstalled()
@@ -158,7 +175,9 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
       })
 
       // MediaMTX起動（ストリームIDを渡す）
-      const mediamtxStatus = await startMediaMTX(currentStreamId)
+      const mediamtxStatus = await startMediaMTX(currentStreamId, {
+        onUnexpectedExit: handleMediaMTXUnexpectedExit
+      })
       if (!mediamtxStatus.running) {
         const errorInfo: StreamInfo = {
           status: 'error',
