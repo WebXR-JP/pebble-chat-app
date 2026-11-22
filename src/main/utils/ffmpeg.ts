@@ -62,3 +62,10 @@ export function isFFmpegInfoMessage(output: string): boolean {
     /encoder\s*:\s*Lav[cf]\d+/.test(output)
   )
 }
+
+// `ffmpeg -encoders` の出力に、配信で使うH.264エンコーダー（libx264）が含まれるか
+// 出力例: " V....D libx264              libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (codec h264)"
+// libx264を含まないビルド（LGPL版など）では "Unknown encoder 'libx264'" でエンコードに失敗する
+export function hasLibx264Encoder(encodersOutput: string): boolean {
+  return /^\s*V\S*\s+libx264\s/m.test(encodersOutput)
+}

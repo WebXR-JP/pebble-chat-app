@@ -16,7 +16,8 @@ vi.mock('fs', () => ({
 }))
 
 vi.mock('child_process', () => ({
-  execSync: vi.fn()
+  execSync: vi.fn(),
+  execFileSync: vi.fn()
 }))
 
 vi.mock('../platform', () => ({
@@ -37,12 +38,18 @@ import {
   getFFmpegPath
 } from '../paths'
 import fs from 'fs'
-import { execSync } from 'child_process'
+import { execSync, execFileSync } from 'child_process'
 import { getPlatform } from '../platform'
+
+// libx264を含む `ffmpeg -encoders` の出力
+const ENCODERS_WITH_LIBX264 = ' V....D libx264              libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (codec h264)\n'
 
 describe('paths', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // 既定ではシステムのFFmpegは正常に動く
+    vi.mocked(execFileSync).mockReturnValue(ENCODERS_WITH_LIBX264)
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -229,6 +236,87 @@ describe('paths', () => {
         const result = getFFmpegPath()
 
         expect(result).toBe('/usr/bin/ffmpeg')
+      })
+    })
+
+    describe('システムのFFmpegが使えるか確認する', () => {
+      it('バンドル版がある場合は実行確認しない', () => {
+        vi.mocked(fs.existsSync).mockReturnValue(true)
+
+        getFFmpegPath()
+
+        expect(execFileSync).not.toHaveBeenCalled()
+      })
+
+      it('-encoders を実行して確認する', () => {
+        vi.mocked(getPlatform).mockReturnValue('darwin')
+        vi.mocked(fs.existsSync).mockImplementation((p) => p === '/opt/homebrew/bin/ffmpeg')
+        vi.mocked(execSync).mockImplementation(() => {
+          throw new Error('not found')
+        })
+
+        getFFmpegPath()
+
+        expect(execFileSync).toHaveBeenCalledWith(
+          '/opt/homebrew/bin/ffmpeg',
+          ['-hide_banner', '-encoders'],
+          expect.objectContaining({ timeout: expect.any(Number) })
+        )
+      })
+
+      it('起動できないFFmpegはスキップして次の候補を使う', () => {
+        vi.mocked(getPlatform).mockReturnValue('darwin')
+        vi.mocked(fs.existsSync).mockImplementation(
+          (p) => p === '/opt/homebrew/bin/ffmpeg' || p === '/usr/local/bin/ffmpeg'
+        )
+        vi.mocked(execSync).mockReturnValue('/opt/homebrew/bin/ffmpeg\n')
+        vi.mocked(execFileSync).mockImplementation((file) => {
+          if (file === '/opt/homebrew/bin/ffmpeg') {
+            throw new Error('Command failed: dyld: Library not loaded: libx265.215.dylib')
+          }
+          return ENCODERS_WITH_LIBX264
+        })
+
+        const result = getFFmpegPath()
+
+        expect(result).toBe('/usr/local/bin/ffmpeg')
+      })
+
+      it('libx264を含まないFFmpegはスキップする', () => {
+        vi.mocked(getPlatform).mockReturnValue('win32')
+        vi.mocked(fs.existsSync).mockImplementation((p) => p === 'C:\\ffmpeg\\bin\\ffmpeg.exe')
+        vi.mocked(execSync).mockReturnValue('C:\\ffmpeg\\bin\\ffmpeg.exe\r\n')
+        vi.mocked(execFileSync).mockReturnValue(' V....D libopenh264          OpenH264 H.264 / AVC\n')
+
+        const result = getFFmpegPath()
+
+        expect(result).toBeNull()
+      })
+
+      it('使えるFFmpegが1つもなければ null を返す（バンドル版をダウンロードさせる）', () => {
+        vi.mocked(getPlatform).mockReturnValue('darwin')
+        vi.mocked(fs.existsSync).mockImplementation((p) => p === '/opt/homebrew/bin/ffmpeg')
+        vi.mocked(execSync).mockReturnValue('/opt/homebrew/bin/ffmpeg\n')
+        vi.mocked(execFileSync).mockImplementation(() => {
+          throw new Error('Command failed')
+        })
+
+        const result = getFFmpegPath()
+
+        expect(result).toBeNull()
+      })
+
+      it('whichと一般的なパスで同じFFmpegが見つかっても実行確認は1回だけ', () => {
+        vi.mocked(getPlatform).mockReturnValue('darwin')
+        vi.mocked(fs.existsSync).mockImplementation((p) => p === '/opt/homebrew/bin/ffmpeg')
+        vi.mocked(execSync).mockReturnValue('/opt/homebrew/bin/ffmpeg\n')
+        vi.mocked(execFileSync).mockImplementation(() => {
+          throw new Error('Command failed')
+        })
+
+        getFFmpegPath()
+
+        expect(execFileSync).toHaveBeenCalledTimes(1)
       })
     })
   })

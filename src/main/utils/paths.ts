@@ -1,8 +1,12 @@
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { execSync } from 'child_process'
+import { execSync, execFileSync } from 'child_process'
 import { getMediaMTXBinaryName, getFFmpegBinaryName, getPlatform } from './platform'
+import { hasLibx264Encoder } from './ffmpeg'
+
+// システムのFFmpegが使えるか確認するときのタイムアウト
+const FFMPEG_CHECK_TIMEOUT_MS = 10_000
 
 // ユーザーデータディレクトリ（バイナリ保存場所）
 export function getUserDataPath(): string {
@@ -57,8 +61,8 @@ function findFFmpegByWhich(platform: string): string | null {
   return null
 }
 
-// 一般的なインストール場所からFFmpegを探す
-function findFFmpegInCommonPaths(platform: string): string | null {
+// 一般的なインストール場所にあるFFmpegを列挙する
+function findFFmpegInCommonPaths(platform: string): string[] {
   const commonPaths: string[] = platform === 'darwin'
     ? [
         '/opt/homebrew/bin/ffmpeg',      // Apple Silicon Homebrew
@@ -82,11 +86,28 @@ function findFFmpegInCommonPaths(platform: string): string | null {
         '/usr/local/bin/ffmpeg',
       ]
 
-  for (const ffmpegPath of commonPaths) {
-    if (fs.existsSync(ffmpegPath)) return ffmpegPath
-  }
+  return commonPaths.filter((ffmpegPath) => fs.existsSync(ffmpegPath))
+}
 
-  return null
+// システムのFFmpegが配信に使えるか、実際に実行して確認する
+// ファイルがあっても、Homebrewで依存ライブラリだけ更新されて起動できなくなっていたり、
+// libx264を含まないビルドだったりすると、配信が黙って失敗するため
+function isUsableFFmpeg(ffmpegPath: string): boolean {
+  try {
+    const output = execFileSync(ffmpegPath, ['-hide_banner', '-encoders'], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: FFMPEG_CHECK_TIMEOUT_MS
+    })
+    if (hasLibx264Encoder(output)) return true
+
+    console.warn('[FFmpeg] Skipping system FFmpeg without libx264:', ffmpegPath)
+    return false
+  } catch (error) {
+    const reason = error instanceof Error ? error.message.split('\n')[0] : String(error)
+    console.warn('[FFmpeg] Skipping system FFmpeg that failed to run:', ffmpegPath, reason)
+    return false
+  }
 }
 
 // FFmpegのパスを検出（バンドル版を優先）
@@ -97,10 +118,10 @@ export function getFFmpegPath(): string | null {
   const bundledPath = getBundledFFmpegPath()
   if (fs.existsSync(bundledPath)) return bundledPath
 
-  // 次にwhichコマンドで探す
-  const whichResult = findFFmpegByWhich(platform)
-  if (whichResult) return whichResult
+  // 次にシステムのFFmpeg（whichコマンド → 一般的なインストール場所の順）から、実際に使えるものを選ぶ
+  // 使えるものがなければnullを返し、セットアップでバンドル版をダウンロードさせる
+  const candidates = [findFFmpegByWhich(platform), ...findFFmpegInCommonPaths(platform)]
+  const uniqueCandidates = Array.from(new Set(candidates.filter((p): p is string => p !== null)))
 
-  // 一般的なインストール場所を探す
-  return findFFmpegInCommonPaths(platform)
+  return uniqueCandidates.find(isUsableFFmpeg) ?? null
 }
