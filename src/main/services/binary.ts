@@ -2,13 +2,22 @@ import fs from 'fs'
 import fsp from 'fs/promises'
 import path from 'path'
 import https from 'https'
+import type { IncomingMessage } from 'http'
+import { pipeline } from 'stream/promises'
 import { exec } from 'child_process'
 import * as tar from 'tar'
 import { Extract } from 'unzipper'
 import { getBinariesPath, getMediaMTXPath, getTempPath, getMediaMTXConfigPath, getBundledFFmpegPath, getFFmpegPath } from '../utils/paths'
 import { getPlatform, getMediaMTXDownloadUrl, getMediaMTXBinaryName, getFFmpegDownloadUrl } from '../utils/platform'
+import { resolveRedirectUrl, createDownloadFileName } from '../utils/download'
 
 const MEDIAMTX_VERSION = '1.9.3'
+
+// ダウンロード時に辿るリダイレクトの最大回数
+const MAX_REDIRECTS = 5
+
+// ダウンロード中に通信が途絶えたとみなすまでの時間（ソケットのアイドル時間）
+const DOWNLOAD_IDLE_TIMEOUT_MS = 60_000
 
 // リレーサーバー設定
 const RELAY_SERVER_HOST = 'pebble.xrift.net'
@@ -43,11 +52,13 @@ async function installFFmpegWindows(
   downloadUrl: string,
   onProgress?: (message: string) => void
 ): Promise<void> {
-  const archivePath = path.join(tempPath, 'ffmpeg.zip')
-  await downloadFile(downloadUrl, archivePath)
+  const archivePath = path.join(tempPath, createDownloadFileName('ffmpeg', 'zip', Date.now()))
+  await withTempFile(archivePath, async () => {
+    await downloadFile(downloadUrl, archivePath)
 
-  onProgress?.('FFmpegを展開中...')
-  await extractZip(archivePath, tempPath)
+    onProgress?.('FFmpegを展開中...')
+    await extractZip(archivePath, tempPath)
+  })
 
   // 展開されたディレクトリからffmpeg.exeを探してコピー
   const extractedDirs = await fsp.readdir(tempPath)
@@ -64,8 +75,6 @@ async function installFFmpegWindows(
   await fsp.copyFile(ffmpegExePath, getBundledFFmpegPath())
   // 展開したディレクトリを削除
   await fsp.rm(path.join(tempPath, ffmpegDir), { recursive: true, force: true })
-  // 一時ファイル削除
-  await fsp.rm(archivePath, { force: true })
 }
 
 // macOS用FFmpegインストール
@@ -75,11 +84,13 @@ async function installFFmpegMacOS(
   downloadUrl: string,
   onProgress?: (message: string) => void
 ): Promise<void> {
-  const archivePath = path.join(tempPath, 'ffmpeg.zip')
-  await downloadFile(downloadUrl, archivePath)
+  const archivePath = path.join(tempPath, createDownloadFileName('ffmpeg', 'zip', Date.now()))
+  await withTempFile(archivePath, async () => {
+    await downloadFile(downloadUrl, archivePath)
 
-  onProgress?.('FFmpegを展開中...')
-  await extractZip(archivePath, binPath)
+    onProgress?.('FFmpegを展開中...')
+    await extractZip(archivePath, binPath)
+  })
 
   // Gatekeeper対応
   onProgress?.('Gatekeeper対応中...')
@@ -87,9 +98,6 @@ async function installFFmpegMacOS(
 
   // 実行権限付与
   await fsp.chmod(getBundledFFmpegPath(), 0o755)
-
-  // 一時ファイル削除
-  await fsp.rm(archivePath, { force: true })
 }
 
 // FFmpegをダウンロード・インストール
@@ -134,21 +142,23 @@ export async function installMediaMTX(
   const downloadUrl = getMediaMTXDownloadUrl(MEDIAMTX_VERSION)
   const platform = getPlatform()
   const ext = platform === 'win32' ? 'zip' : 'tar.gz'
-  const archivePath = path.join(tempPath, `mediamtx.${ext}`)
+  const archivePath = path.join(tempPath, createDownloadFileName('mediamtx', ext, Date.now()))
 
   onProgress?.('MediaMTXをダウンロード中...')
 
-  // ダウンロード
-  await downloadFile(downloadUrl, archivePath)
+  await withTempFile(archivePath, async () => {
+    // ダウンロード
+    await downloadFile(downloadUrl, archivePath)
 
-  onProgress?.('MediaMTXを展開中...')
+    onProgress?.('MediaMTXを展開中...')
 
-  // 展開
-  if (platform === 'win32') {
-    await extractZip(archivePath, binPath)
-  } else {
-    await extractTarGz(archivePath, binPath)
-  }
+    // 展開
+    if (platform === 'win32') {
+      await extractZip(archivePath, binPath)
+    } else {
+      await extractTarGz(archivePath, binPath)
+    }
+  })
 
   // macOSの場合、Gatekeeper対応
   if (platform === 'darwin') {
@@ -164,49 +174,66 @@ export async function installMediaMTX(
   // 設定ファイルを生成
   await updateMediaMTXConfig()
 
-  // 一時ファイル削除
-  await fsp.rm(archivePath, { force: true })
-
   onProgress?.('MediaMTXのインストール完了')
 }
 
-// ファイルダウンロード
-function downloadFile(url: string, destPath: string): Promise<void> {
+// 一時ファイルを使う処理を実行し、成否にかかわらず最後に一時ファイルを削除する
+// ダウンロード名は毎回異なるため、失敗時に残すと一時ディレクトリに溜まっていく
+async function withTempFile(filePath: string, fn: () => Promise<void>): Promise<void> {
+  try {
+    await fn()
+  } finally {
+    await fsp.rm(filePath, { force: true }).catch(() => {})
+  }
+}
+
+// HTTPS GETしてレスポンスを返す（ボディは未読のまま）
+// ソケットが一定時間無通信になったらリクエストを破棄する。
+// レスポンス受信後（ボディのダウンロード中）に途絶えた場合もレスポンスがエラーになり、pipelineが失敗する
+function httpsGet(url: string): Promise<IncomingMessage> {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(destPath)
+    const request = https.get(url, { timeout: DOWNLOAD_IDLE_TIMEOUT_MS }, resolve)
+    request.on('timeout', () => {
+      request.destroy(new Error(`Download timed out: no data for ${DOWNLOAD_IDLE_TIMEOUT_MS / 1000}s`))
+    })
+    request.on('error', reject)
+  })
+}
 
-    const request = (currentUrl: string): void => {
-      https
-        .get(currentUrl, (response) => {
-          // リダイレクト対応（301, 302, 303, 307, 308）
-          if ([301, 302, 303, 307, 308].includes(response.statusCode || 0)) {
-            const redirectUrl = response.headers.location
-            if (redirectUrl) {
-              request(redirectUrl)
-              return
-            }
-          }
+// リダイレクトを辿り、ステータス200のレスポンスを返す
+async function openDownloadResponse(url: string): Promise<IncomingMessage> {
+  let currentUrl = url
 
-          if (response.statusCode !== 200) {
-            reject(new Error(`Download failed: ${response.statusCode}`))
-            return
-          }
+  for (let i = 0; i <= MAX_REDIRECTS; i++) {
+    const response = await httpsGet(currentUrl)
+    const redirectUrl = resolveRedirectUrl(response.statusCode, response.headers.location, currentUrl)
 
-          response.pipe(file)
-
-          file.on('finish', () => {
-            file.close()
-            resolve()
-          })
-        })
-        .on('error', (err) => {
-          fs.unlink(destPath, () => {})
-          reject(err)
-        })
+    if (redirectUrl) {
+      // ボディを読み捨ててソケットを解放する
+      response.resume()
+      currentUrl = redirectUrl
+      continue
     }
 
-    request(url)
-  })
+    if (response.statusCode !== 200) {
+      response.resume()
+      throw new Error(`Download failed: ${response.statusCode}`)
+    }
+
+    return response
+  }
+
+  throw new Error('Download failed: too many redirects')
+}
+
+// ファイルダウンロード
+// 書き込みストリームはステータス200を確認してから開き、pipelineで扱う。
+// pipelineはエラー時に両ストリームを破棄するため、ファイルハンドルが開いたまま残らない
+// （以前は失敗時にハンドルを開いたままunlinkしており、Windowsで削除待ちのファイルが残って
+// 再試行時の書き込みがEPERMになり、さらに未処理のerrorイベントでクラッシュしていた）
+async function downloadFile(url: string, destPath: string): Promise<void> {
+  const response = await openDownloadResponse(url)
+  await pipeline(response, fs.createWriteStream(destPath))
 }
 
 // tar.gz展開
@@ -219,12 +246,20 @@ async function extractTarGz(archivePath: string, destPath: string): Promise<void
 }
 
 // zip展開
+// エラー時は読み込みストリームも破棄し、Windowsでアーカイブのハンドルが残って削除できなくなるのを防ぐ
 async function extractZip(archivePath: string, destPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    fs.createReadStream(archivePath)
+    const readStream = fs.createReadStream(archivePath)
+    const fail = (error: Error): void => {
+      readStream.destroy()
+      reject(error)
+    }
+
+    readStream
+      .on('error', fail)
       .pipe(Extract({ path: destPath }))
       .on('close', resolve)
-      .on('error', reject)
+      .on('error', fail)
   })
 }
 
