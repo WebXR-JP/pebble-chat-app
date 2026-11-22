@@ -1,24 +1,22 @@
 import fs from 'fs'
 import fsp from 'fs/promises'
 import path from 'path'
-import https from 'https'
-import type { IncomingMessage } from 'http'
+import { Readable, Transform } from 'stream'
+import type { ReadableStream as NodeReadableStream } from 'stream/web'
 import { pipeline } from 'stream/promises'
+import { net } from 'electron'
 import { exec } from 'child_process'
 import { createHash } from 'crypto'
 import * as tar from 'tar'
 import { Extract } from 'unzipper'
 import { getBinariesPath, getMediaMTXPath, getTempPath, getMediaMTXConfigPath, getBundledFFmpegPath, getFFmpegPath } from '../utils/paths'
 import { getPlatform, getArchitecture, getMediaMTXDownloadUrl, getMediaMTXBinaryName, getFFmpegDownloadUrl, getFFmpegDownloadSha256 } from '../utils/platform'
-import { resolveRedirectUrl, createDownloadFileName, isSha256Match } from '../utils/download'
+import { createDownloadFileName, isSha256Match } from '../utils/download'
 import { getMachOArchitecture, isMachOArchitectureCompatible, MACHO_HEADER_LENGTH } from '../utils/macho'
 
 const MEDIAMTX_VERSION = '1.9.3'
 
-// ダウンロード時に辿るリダイレクトの最大回数
-const MAX_REDIRECTS = 5
-
-// ダウンロード中に通信が途絶えたとみなすまでの時間（ソケットのアイドル時間）
+// ダウンロード中に通信が途絶えたとみなすまでの時間（データを受信しない時間）
 const DOWNLOAD_IDLE_TIMEOUT_MS = 60_000
 
 // リレーサーバー設定
@@ -238,53 +236,55 @@ async function withTempFile(filePath: string, fn: () => Promise<void>): Promise<
   }
 }
 
-// HTTPS GETしてレスポンスを返す（ボディは未読のまま）
-// ソケットが一定時間無通信になったらリクエストを破棄する。
-// レスポンス受信後（ボディのダウンロード中）に途絶えた場合もレスポンスがエラーになり、pipelineが失敗する
-function httpsGet(url: string): Promise<IncomingMessage> {
-  return new Promise((resolve, reject) => {
-    const request = https.get(url, { timeout: DOWNLOAD_IDLE_TIMEOUT_MS }, resolve)
-    request.on('timeout', () => {
-      request.destroy(new Error(`Download timed out: no data for ${DOWNLOAD_IDLE_TIMEOUT_MS / 1000}s`))
-    })
-    request.on('error', reject)
-  })
-}
-
-// リダイレクトを辿り、ステータス200のレスポンスを返す
-async function openDownloadResponse(url: string): Promise<IncomingMessage> {
-  let currentUrl = url
-
-  for (let i = 0; i <= MAX_REDIRECTS; i++) {
-    const response = await httpsGet(currentUrl)
-    const redirectUrl = resolveRedirectUrl(response.statusCode, response.headers.location, currentUrl)
-
-    if (redirectUrl) {
-      // ボディを読み捨ててソケットを解放する
-      response.resume()
-      currentUrl = redirectUrl
-      continue
-    }
-
-    if (response.statusCode !== 200) {
-      response.resume()
-      throw new Error(`Download failed: ${response.statusCode}`)
-    }
-
-    return response
-  }
-
-  throw new Error('Download failed: too many redirects')
-}
-
 // ファイルダウンロード
-// 書き込みストリームはステータス200を確認してから開き、pipelineで扱う。
-// pipelineはエラー時に両ストリームを破棄するため、ファイルハンドルが開いたまま残らない
+// Electronのnet.fetch（Chromiumのネットワークスタック）を使う。
+// Node.jsのhttpsと違い、OSの証明書ストアとシステムのプロキシ設定が使われるため、
+// 社内プロキシやセキュリティソフトが通信を中継する環境でも証明書エラーになりにくい。
+// リダイレクトはnet.fetchが自動で辿る。
+//
+// pipelineはエラー時に全ストリームを破棄するため、ファイルハンドルが開いたまま残らない
 // （以前は失敗時にハンドルを開いたままunlinkしており、Windowsで削除待ちのファイルが残って
 // 再試行時の書き込みがEPERMになり、さらに未処理のerrorイベントでクラッシュしていた）
 async function downloadFile(url: string, destPath: string): Promise<void> {
-  const response = await openDownloadResponse(url)
-  await pipeline(response, fs.createWriteStream(destPath))
+  // 一定時間データを受信しなければ中断する（接続待ち・ダウンロード中のどちらも対象）
+  const controller = new AbortController()
+  let idleTimer: ReturnType<typeof setTimeout> | undefined
+  const resetIdleTimer = (): void => {
+    clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => {
+      controller.abort(new Error(`Download timed out: no data for ${DOWNLOAD_IDLE_TIMEOUT_MS / 1000}s`))
+    }, DOWNLOAD_IDLE_TIMEOUT_MS)
+  }
+
+  resetIdleTimer()
+
+  try {
+    // 100MB以上あるFFmpegなどをChromiumのHTTPキャッシュ（userData/Cache）に溜めないよう、キャッシュを使わない
+    const response = await net.fetch(url, { signal: controller.signal, cache: 'no-store' })
+    // 部分レスポンス（206など）を完全なファイルとして扱わないよう、200のみ受け付ける
+    if (response.status !== 200 || !response.body) {
+      // 読まないボディは破棄して、リクエストを開いたままにしない
+      await response.body?.cancel().catch(() => {})
+      throw new Error(`Download failed: ${response.status}`)
+    }
+
+    // 受信のたびにアイドルタイマーをリセットする
+    const idleWatcher = new Transform({
+      transform(chunk, _encoding, callback): void {
+        resetIdleTimer()
+        callback(null, chunk)
+      }
+    })
+
+    await pipeline(
+      Readable.fromWeb(response.body as unknown as NodeReadableStream),
+      idleWatcher,
+      fs.createWriteStream(destPath),
+      { signal: controller.signal }
+    )
+  } finally {
+    clearTimeout(idleTimer)
+  }
 }
 
 // tar.gz展開
