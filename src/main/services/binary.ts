@@ -16,6 +16,9 @@ const MEDIAMTX_VERSION = '1.9.3'
 // ダウンロード時に辿るリダイレクトの最大回数
 const MAX_REDIRECTS = 5
 
+// ダウンロード中に通信が途絶えたとみなすまでの時間（ソケットのアイドル時間）
+const DOWNLOAD_IDLE_TIMEOUT_MS = 60_000
+
 // リレーサーバー設定
 const RELAY_SERVER_HOST = 'pebble.xrift.net'
 
@@ -185,9 +188,15 @@ async function withTempFile(filePath: string, fn: () => Promise<void>): Promise<
 }
 
 // HTTPS GETしてレスポンスを返す（ボディは未読のまま）
+// ソケットが一定時間無通信になったらリクエストを破棄する。
+// レスポンス受信後（ボディのダウンロード中）に途絶えた場合もレスポンスがエラーになり、pipelineが失敗する
 function httpsGet(url: string): Promise<IncomingMessage> {
   return new Promise((resolve, reject) => {
-    https.get(url, resolve).on('error', reject)
+    const request = https.get(url, { timeout: DOWNLOAD_IDLE_TIMEOUT_MS }, resolve)
+    request.on('timeout', () => {
+      request.destroy(new Error(`Download timed out: no data for ${DOWNLOAD_IDLE_TIMEOUT_MS / 1000}s`))
+    })
+    request.on('error', reject)
   })
 }
 
@@ -237,12 +246,20 @@ async function extractTarGz(archivePath: string, destPath: string): Promise<void
 }
 
 // zip展開
+// エラー時は読み込みストリームも破棄し、Windowsでアーカイブのハンドルが残って削除できなくなるのを防ぐ
 async function extractZip(archivePath: string, destPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    fs.createReadStream(archivePath)
+    const readStream = fs.createReadStream(archivePath)
+    const fail = (error: Error): void => {
+      readStream.destroy()
+      reject(error)
+    }
+
+    readStream
+      .on('error', fail)
       .pipe(Extract({ path: destPath }))
       .on('close', resolve)
-      .on('error', reject)
+      .on('error', fail)
   })
 }
 
