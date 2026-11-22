@@ -119,7 +119,7 @@ export function registerStreamingHandlers(getMainWindow: () => BrowserWindow | n
         sendSetupProgress(window, {
           mediamtx: 'ready',
           ffmpeg: 'downloading',
-          message: 'FFmpegをダウンロード中...（100MB以上あるため時間がかかります）'
+          message: 'FFmpegをダウンロード中...（サイズが大きいため時間がかかることがあります）'
         })
 
         await installFFmpeg((msg) => {
